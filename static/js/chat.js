@@ -31,7 +31,7 @@ function startNewConversation() {
 function sendMessage(message) {
     if (!currentThreadId) {
         console.error('No active conversation');
-        startNewConversation();
+        alert('Please select a role to start a conversation.');
         return;
     }
 
@@ -77,6 +77,8 @@ function formatRole(role) {
 
 function displayMessage(message, sender) {
     const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+
     const messageContainer = document.createElement('div');
     messageContainer.classList.add('message-container', `${sender}-container`);
     
@@ -105,7 +107,9 @@ function displayMessage(message, sender) {
 
 function scrollToBottom() {
     const chatContainer = document.getElementById('chat-container');
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
 }
 
 function showLoading(show) {
@@ -136,6 +140,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (questionForm) {
         questionForm.addEventListener('submit', (e) => {
             e.preventDefault();
+            if (!currentThreadId) {
+                alert('Please select a role to start a conversation.');
+                return;
+            }
             const message = questionInput.value.trim();
             if (message) {
                 sendMessage(message);

@@ -10,48 +10,62 @@ app = Flask(__name__)
 
 # Database connection
 def get_db_connection():
-    conn = psycopg2.connect(
-        host=os.getenv('PGHOST', 'localhost'),
-        database=os.getenv('PGDATABASE', 'bemori_db'),
-        user=os.getenv('PGUSER', 'bemori_user'),
-        password=os.getenv('PGPASSWORD', 'bemori_password'),
-        port=os.getenv('PGPORT', '5432')
-    )
-    return conn
+    try:
+        conn = psycopg2.connect(
+            host=os.getenv('PGHOST', 'localhost'),
+            database=os.getenv('PGDATABASE', 'bemori_db'),
+            user=os.getenv('PGUSER', 'bemori_user'),
+            password=os.getenv('PGPASSWORD', 'bemori_password'),
+            port=os.getenv('PGPORT', '5432')
+        )
+        return conn
+    except psycopg2.Error as e:
+        print(f"Unable to connect to the database. Error: {e}")
+        return None
 
 # Initialize database
 def init_db():
     conn = get_db_connection()
-    cur = conn.cursor()
+    if conn is None:
+        return False
     
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS chat_messages (
-            id SERIAL PRIMARY KEY,
-            role VARCHAR(255) NOT NULL,
-            thread_id VARCHAR(255) NOT NULL,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            sender VARCHAR(50) NOT NULL,
-            message_content TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    cur.close()
-    conn.close()
+    try:
+        cur = conn.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id SERIAL PRIMARY KEY,
+                role VARCHAR(255) NOT NULL,
+                thread_id VARCHAR(255) NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                sender VARCHAR(50) NOT NULL,
+                message_content TEXT NOT NULL
+            )
+        ''')
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    except psycopg2.Error as e:
+        print(f"Error initializing database: {e}")
+        return False
 
 # Test database connection and table creation
 def test_db_connection():
-    try:
-        init_db()
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM chat_messages LIMIT 1")
-        cur.close()
-        conn.close()
-        print("Database connection successful and table exists.")
-        return True
-    except Exception as e:
-        print(f"Error connecting to the database: {str(e)}")
-        return False
+    if init_db():
+        try:
+            conn = get_db_connection()
+            if conn is None:
+                return False
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM chat_messages LIMIT 1")
+            cur.close()
+            conn.close()
+            print("Database connection successful and table exists.")
+            return True
+        except psycopg2.Error as e:
+            print(f"Error testing database connection: {e}")
+            return False
+    return False
 
 # Init client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -70,6 +84,9 @@ def index():
 def start_conversation():
     role = request.args.get('role')
     conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Unable to connect to the database"}), 500
+    
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
     cur.execute("SELECT thread_id FROM chat_messages WHERE role = %s ORDER BY timestamp DESC LIMIT 1", (role,))
@@ -100,6 +117,9 @@ def chat():
     user_input = data.get('message', '')
 
     conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Unable to connect to the database"}), 500
+    
     cur = conn.cursor()
 
     # Save user message to database

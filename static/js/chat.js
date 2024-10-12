@@ -22,6 +22,9 @@ function sendMessage(message) {
         return;
     }
 
+    // Display user message immediately
+    displayMessage(message, 'user');
+
     showLoading(true);
 
     fetch('/chat', {
@@ -37,7 +40,6 @@ function sendMessage(message) {
     })
     .then(response => response.json())
     .then(data => {
-        displayMessage(message, 'user');
         displayMessage(data.response, 'assistant');
         showLoading(false);
     })

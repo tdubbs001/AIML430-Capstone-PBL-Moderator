@@ -18,19 +18,8 @@ today_date_folder = os.path.join('transcripts', datetime.utcnow().strftime("%Y-%
 if not os.path.exists(today_date_folder):
     os.makedirs(today_date_folder)
 
-# Functions for persistent storage of role threads
-def load_role_threads():
-    if os.path.exists('role_threads.json'):
-        with open('role_threads.json', 'r') as f:
-            return json.load(f)
-    return {}
-
-def save_role_threads(threads):
-    with open('role_threads.json', 'w') as f:
-        json.dump(threads, f)
-
-# Load existing role threads
-role_threads = load_role_threads()
+# Dictionary to store thread IDs for each role
+role_threads = {}
 
 @app.route('/')
 def index():
@@ -38,22 +27,17 @@ def index():
 
 @app.route('/start', methods=['GET'])
 def start_conversation():
-    global role_threads
     role = request.args.get('role')
-    role_threads = load_role_threads()
     if role in role_threads:
         return jsonify({"thread_id": role_threads[role]})
     thread = client.beta.threads.create()
     role_threads[role] = thread.id
-    save_role_threads(role_threads)
     return jsonify({"thread_id": thread.id})
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    global role_threads
     data = request.json
     user_role = data.get('role', '')
-    role_threads = load_role_threads()
     thread_id = role_threads.get(user_role)
     if not thread_id:
         return jsonify({"error": "No active conversation for this role"}), 400

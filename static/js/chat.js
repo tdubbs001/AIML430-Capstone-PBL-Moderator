@@ -49,16 +49,30 @@ function sendMessage(message) {
 
 function displayMessage(message, sender) {
     const chatMessages = document.getElementById('chat-messages');
+    const messageContainer = document.createElement('div');
+    messageContainer.classList.add('message-container');
+    
     const messageElement = document.createElement('div');
     messageElement.classList.add('message', `${sender}-message`);
     
+    const messageHeader = document.createElement('div');
+    messageHeader.classList.add('message-header');
+    messageHeader.textContent = sender === 'user' ? selectedRole : 'AI Assistant';
+    
+    messageElement.appendChild(messageHeader);
+    
+    const messageContent = document.createElement('div');
+    messageContent.classList.add('message-content');
+    
     if (sender === 'assistant') {
-        messageElement.innerHTML = marked.parse(message);
+        messageContent.innerHTML = marked.parse(message);
     } else {
-        messageElement.textContent = message;
+        messageContent.textContent = message;
     }
     
-    chatMessages.appendChild(messageElement);
+    messageElement.appendChild(messageContent);
+    messageContainer.appendChild(messageElement);
+    chatMessages.appendChild(messageContainer);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 

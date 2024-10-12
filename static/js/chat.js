@@ -1,6 +1,19 @@
 let currentThreadId = null;
 let selectedRole = null;
 
+const roleNames = {
+    'undp_head': 'UNDP - Head of Environment and Energy Section',
+    'undp_water_project_manager': 'UNDP Water Project Manager (United Nations Volunteer)',
+    'local_government_official': 'Local Government Official – District Water Engineer',
+    'local_ngo_officer': 'Local NGO Programme Officer',
+    'international_ngo_officer': 'International Implementing NGO Program Officer with Oxfam GB',
+    'bilateral_aid_officer': 'Bilateral Aid Agency Programme Officer – Irish Aid',
+    'eu_officer': 'European Union Programme Officer',
+    'village_chief': 'Village Chief',
+    'womens_group_rep': 'District Women\'s Group Representative for OPMT (The Popular Organisation of East Timorese Women)',
+    'water_division_director': 'Director of the Water Division in the Ministry of Infrastructure'
+};
+
 function startNewConversation() {
     fetch('/start')
         .then(response => response.json())
@@ -22,7 +35,6 @@ function sendMessage(message) {
         return;
     }
 
-    // Display user message immediately
     displayMessage(message, 'user');
 
     showLoading(true);
@@ -50,9 +62,9 @@ function sendMessage(message) {
 }
 
 function formatRole(role) {
-    return role.split('_')
-              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(' ');
+    return roleNames[role] || role.split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
 }
 
 function displayMessage(message, sender) {
@@ -113,6 +125,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Start a new conversation when the page loads
     startNewConversation();
 });

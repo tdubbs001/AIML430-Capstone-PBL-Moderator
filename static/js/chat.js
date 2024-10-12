@@ -24,6 +24,7 @@ function startNewConversation() {
         .then(data => {
             currentThreadId = data.thread_id;
             document.getElementById('chat-messages').innerHTML = '';
+            displaySystemMessage(`New conversation started as ${roleNames[selectedRole]}`);
         })
         .catch(error => console.error('Error:', error));
 }
@@ -73,6 +74,22 @@ function sendMessage(message) {
 
 function formatRole(role) {
     return roleNames[role] || role;
+}
+
+function displaySystemMessage(message) {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+
+    const messageContainer = document.createElement('div');
+    messageContainer.classList.add('message-container', 'system-container');
+    
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message', 'system-message');
+    messageElement.textContent = message;
+    
+    messageContainer.appendChild(messageElement);
+    chatMessages.appendChild(messageContainer);
+    scrollToBottom();
 }
 
 function displayMessage(message, sender) {

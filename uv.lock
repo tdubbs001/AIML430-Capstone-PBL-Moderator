@@ -450,6 +450,7 @@ dependencies = [
     { name = "flask-sqlalchemy" },
     { name = "openai" },
     { name = "psycopg2-binary" },
+    { name = "sqlalchemy" },
 ]
 
 [package.metadata]
@@ -459,6 +460,7 @@ requires-dist = [
     { name = "flask-sqlalchemy", specifier = ">=3.1.1" },
     { name = "openai", specifier = ">=1.51.2" },
     { name = "psycopg2-binary", specifier = ">=2.9.9" },
+    { name = "sqlalchemy", specifier = ">=2.0.35" },
 ]
 
 [[package]]

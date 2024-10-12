@@ -3,6 +3,7 @@
   --text-color: #333333;
   --user-message-color: #e6f2ff;
   --ai-message-color: #f0e6ff;
+  --system-message-color: #e6ffe6;
   --accent-color: #0056b3;
   --input-background: #f8f9fa;
   --input-text: #495057;
@@ -13,6 +14,7 @@
   --text-color: #ffffff;
   --user-message-color: #1e3a5f;
   --ai-message-color: #2c1e3f;
+  --system-message-color: #1e3f1e;
   --accent-color: #64b5f6;
   --input-background: #2c2c2c;
   --input-text: #e0e0e0;
@@ -49,6 +51,10 @@ body {
   align-items: flex-start;
 }
 
+.system-container {
+  align-items: center;
+}
+
 .message {
   padding: 12px;
   border-radius: 8px;
@@ -63,6 +69,14 @@ body {
 .assistant-message {
   background-color: var(--ai-message-color);
   color: var(--text-color);
+}
+
+.system-message {
+  background-color: var(--system-message-color);
+  color: var(--text-color);
+  font-style: italic;
+  text-align: center;
+  max-width: 100%;
 }
 
 .message-header {

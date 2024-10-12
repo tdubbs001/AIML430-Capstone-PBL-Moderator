@@ -3,7 +3,9 @@ from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 import functions
 from datetime import datetime
-import json
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 app = Flask(__name__)
 
@@ -13,10 +15,25 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 # Create new assistant or load existing
 assistant_id = functions.create_assistant(client)
 
-# Create the transcript folder with today's date
-today_date_folder = os.path.join('transcripts', datetime.utcnow().strftime("%Y-%m-%d"))
-if not os.path.exists(today_date_folder):
-    os.makedirs(today_date_folder)
+# Set up database connection
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://user:password@localhost/dbname')
+engine = create_engine(DATABASE_URL)
+Base = declarative_base()
+Session = sessionmaker(bind=engine)
+
+# Define Message model
+class Message(Base):
+    __tablename__ = 'messages'
+
+    id = Column(Integer, primary_key=True)
+    thread_id = Column(String, nullable=False)
+    role_type = Column(String, nullable=False)
+    sender = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+# Create tables
+Base.metadata.create_all(engine)
 
 # Dictionary to store thread IDs for each role
 role_threads = {}
@@ -28,11 +45,25 @@ def index():
 @app.route('/start', methods=['GET'])
 def start_conversation():
     role = request.args.get('role')
+    session = Session()
+    
     if role in role_threads:
-        return jsonify({"thread_id": role_threads[role]})
-    thread = client.beta.threads.create()
-    role_threads[role] = thread.id
-    return jsonify({"thread_id": thread.id})
+        thread_id = role_threads[role]
+    else:
+        thread = client.beta.threads.create()
+        thread_id = thread.id
+        role_threads[role] = thread_id
+    
+    # Check if thread exists in database
+    existing_message = session.query(Message).filter_by(thread_id=thread_id).first()
+    if not existing_message:
+        # Create a new thread entry in the database
+        new_message = Message(thread_id=thread_id, role_type=role, sender='system', message='Conversation started')
+        session.add(new_message)
+        session.commit()
+    
+    session.close()
+    return jsonify({"thread_id": thread_id})
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -43,33 +74,12 @@ def chat():
         return jsonify({"error": "No active conversation for this role"}), 400
     user_input = data.get('message', '')
 
-    # Create role-specific folder
-    role_folder = os.path.join(today_date_folder, user_role)
-    if not os.path.exists(role_folder):
-        os.makedirs(role_folder)
+    session = Session()
 
-    # Update log_filename to use the new folder structure
-    log_filename = os.path.join(role_folder, f"thread_{thread_id}.json")
-
-    def append_message_to_json_file(filename, thread_id, speaker, message):
-        entry = {
-            "speaker": speaker,
-            "timestamp": datetime.utcnow().isoformat() + "Z",
-            "message": message
-        }
-        try:
-            with open(filename, "r+") as f:
-                data = json.load(f)
-                if thread_id not in data:
-                    data[thread_id] = []
-                data[thread_id].append(entry)
-                f.seek(0)
-                json.dump(data, f, indent=4)
-        except (FileNotFoundError, json.JSONDecodeError):
-            with open(filename, "w") as f:
-                json.dump({thread_id: [entry]}, f, indent=4)
-
-    append_message_to_json_file(log_filename, thread_id, "user", user_input)
+    # Save user message to database
+    user_message = Message(thread_id=thread_id, role_type=user_role, sender='user', message=user_input)
+    session.add(user_message)
+    session.commit()
 
     # Add the user's role and message to the thread
     client.beta.threads.messages.create(
@@ -94,7 +104,12 @@ def chat():
     messages = client.beta.threads.messages.list(thread_id=thread_id)
     assistant_response = messages.data[0].content[0].text.value
 
-    append_message_to_json_file(log_filename, thread_id, "assistant", assistant_response)
+    # Save assistant message to database
+    assistant_message = Message(thread_id=thread_id, role_type=user_role, sender='assistant', message=assistant_response)
+    session.add(assistant_message)
+    session.commit()
+
+    session.close()
 
     return jsonify({"response": assistant_response})
 

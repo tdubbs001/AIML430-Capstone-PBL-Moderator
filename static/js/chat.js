@@ -23,10 +23,7 @@ function startNewConversation() {
         .then(response => response.json())
         .then(data => {
             currentThreadId = data.thread_id;
-            const chatMessages = document.getElementById('chat-messages');
-            if (chatMessages) {
-                chatMessages.innerHTML = '';
-            }
+            document.getElementById('chat-messages').innerHTML = '';
         })
         .catch(error => console.error('Error:', error));
 }
@@ -140,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const roleDropdown = document.getElementById('role-dropdown');
     const themeToggle = document.getElementById('theme-toggle');
 
-    if (questionForm && questionInput) {
+    if (questionForm) {
         questionForm.addEventListener('submit', (e) => {
             e.preventDefault();
             if (!currentThreadId) {

@@ -39,16 +39,6 @@ body {
   display: flex;
   flex-direction: column;
   margin-bottom: 15px;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeInUp 0.3s ease forwards;
-}
-
-@keyframes fadeInUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .user-container {
@@ -63,19 +53,16 @@ body {
   padding: 12px;
   border-radius: 8px;
   max-width: 80%;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .user-message {
   background-color: var(--user-message-color);
   color: var(--text-color);
-  border-bottom-right-radius: 0;
 }
 
 .assistant-message {
   background-color: var(--ai-message-color);
   color: var(--text-color);
-  border-bottom-left-radius: 0;
 }
 
 .message-header {
@@ -154,7 +141,6 @@ body {
   background-color: var(--accent-color);
   border-color: var(--accent-color);
   color: #ffffff;
-  transition: filter 0.3s ease;
 }
 
 #question-form button:hover {

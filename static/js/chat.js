@@ -91,7 +91,12 @@ function displayMessage(message, sender) {
     messageElement.appendChild(messageContent);
     messageContainer.appendChild(messageElement);
     chatMessages.appendChild(messageContainer);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    scrollToBottom();
+}
+
+function scrollToBottom() {
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
 function showLoading(show) {

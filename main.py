@@ -24,8 +24,13 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
+    
+    # Drop existing tables if they exist
+    cur.execute("DROP TABLE IF EXISTS messages")
+    cur.execute("DROP TABLE IF EXISTS conversations")
+    
     cur.execute('''
-        CREATE TABLE IF NOT EXISTS conversations (
+        CREATE TABLE conversations (
             id SERIAL PRIMARY KEY,
             role VARCHAR(255) NOT NULL,
             thread_id VARCHAR(255) NOT NULL,
@@ -33,7 +38,7 @@ def init_db():
         )
     ''')
     cur.execute('''
-        CREATE TABLE IF NOT EXISTS messages (
+        CREATE TABLE messages (
             id SERIAL PRIMARY KEY,
             conversation_id INTEGER REFERENCES conversations(id),
             sender VARCHAR(50) NOT NULL,

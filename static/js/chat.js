@@ -27,6 +27,7 @@ function startNewConversation() {
 function sendMessage(message) {
     if (!currentThreadId) {
         console.error('No active conversation');
+        startNewConversation();
         return;
     }
 
@@ -62,13 +63,13 @@ function sendMessage(message) {
 }
 
 function formatRole(role) {
-    return roleNames[role] || role; // If the role is not in the dictionary, return it as is
+    return roleNames[role] || role;
 }
 
 function displayMessage(message, sender) {
     const chatMessages = document.getElementById('chat-messages');
     const messageContainer = document.createElement('div');
-    messageContainer.classList.add('message-container');
+    messageContainer.classList.add('message-container', `${sender}-container`);
     
     const messageElement = document.createElement('div');
     messageElement.classList.add('message', `${sender}-message`);
@@ -95,10 +96,12 @@ function displayMessage(message, sender) {
 
 function showLoading(show) {
     const loadingElement = document.querySelector('.loading');
-    if (show) {
-        loadingElement.classList.remove('d-none');
-    } else {
-        loadingElement.classList.add('d-none');
+    if (loadingElement) {
+        if (show) {
+            loadingElement.classList.remove('d-none');
+        } else {
+            loadingElement.classList.add('d-none');
+        }
     }
 }
 
@@ -116,32 +119,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const roleDropdown = document.getElementById('role-dropdown');
     const themeToggle = document.getElementById('theme-toggle');
 
-    questionForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const message = questionInput.value.trim();
-        if (message) {
-            sendMessage(message);
-            questionInput.value = '';
-        }
-    });
+    if (questionForm) {
+        questionForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = questionInput.value.trim();
+            if (message) {
+                sendMessage(message);
+                questionInput.value = '';
+            }
+        });
+    }
 
-    roleDropdown.addEventListener('change', (e) => {
-        selectedRole = e.target.value;
-        if (selectedRole && !currentThreadId) {
-            startNewConversation();
-        }
-    });
+    if (roleDropdown) {
+        roleDropdown.addEventListener('change', (e) => {
+            selectedRole = e.target.value;
+            if (selectedRole && !currentThreadId) {
+                startNewConversation();
+            }
+        });
+    }
 
-    themeToggle.addEventListener('change', toggleTheme);
+    if (themeToggle) {
+        themeToggle.addEventListener('change', toggleTheme);
+    }
 
     // Set initial theme based on user preference or system setting
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
         document.documentElement.setAttribute('data-bs-theme', savedTheme);
-        themeToggle.checked = savedTheme === 'dark';
+        if (themeToggle) {
+            themeToggle.checked = savedTheme === 'dark';
+        }
     } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         document.documentElement.setAttribute('data-bs-theme', 'dark');
-        themeToggle.checked = true;
+        if (themeToggle) {
+            themeToggle.checked = true;
+        }
     }
 
     startNewConversation();

@@ -32,12 +32,21 @@ body {
   background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid var(--accent-color);
   border-radius: 8px;
+  padding: 20px;
 }
 
 .message-container {
   display: flex;
   flex-direction: column;
   margin-bottom: 15px;
+}
+
+.user-container {
+  align-items: flex-end;
+}
+
+.assistant-container {
+  align-items: flex-start;
 }
 
 .message {
@@ -49,14 +58,11 @@ body {
 .user-message {
   background-color: var(--user-message-color);
   color: var(--text-color);
-  align-self: flex-end;
-  margin-left: auto;
 }
 
 .assistant-message {
   background-color: var(--ai-message-color);
   color: var(--text-color);
-  align-self: flex-start;
 }
 
 .message-header {

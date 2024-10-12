@@ -18,24 +18,30 @@ today_date_folder = os.path.join('transcripts', datetime.utcnow().strftime("%Y-%
 if not os.path.exists(today_date_folder):
     os.makedirs(today_date_folder)
 
+# Dictionary to store thread IDs for each role
+role_threads = {}
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/start', methods=['GET'])
 def start_conversation():
+    role = request.args.get('role')
+    if role in role_threads:
+        return jsonify({"thread_id": role_threads[role]})
     thread = client.beta.threads.create()
+    role_threads[role] = thread.id
     return jsonify({"thread_id": thread.id})
 
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.json
-    thread_id = data.get('thread_id')
-    user_input = data.get('message', '')
     user_role = data.get('role', '')
-
+    thread_id = role_threads.get(user_role)
     if not thread_id:
-        return jsonify({"error": "Missing thread_id"}), 400
+        return jsonify({"error": "No active conversation for this role"}), 400
+    user_input = data.get('message', '')
 
     # Create role-specific folder
     role_folder = os.path.join(today_date_folder, user_role)

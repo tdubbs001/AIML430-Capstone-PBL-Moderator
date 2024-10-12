@@ -15,7 +15,11 @@ const roleNames = {
 };
 
 function startNewConversation() {
-    fetch('/start')
+    if (!selectedRole) {
+        console.error('No role selected');
+        return;
+    }
+    fetch(`/start?role=${selectedRole}`)
         .then(response => response.json())
         .then(data => {
             currentThreadId = data.thread_id;
@@ -53,7 +57,12 @@ function sendMessage(message) {
     })
     .then(response => response.json())
     .then(data => {
-        displayMessage(data.response, 'assistant');
+        if (data.error) {
+            console.error('Error:', data.error);
+            alert(data.error);
+        } else {
+            displayMessage(data.response, 'assistant');
+        }
         showLoading(false);
     })
     .catch(error => {
@@ -138,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (roleDropdown) {
         roleDropdown.addEventListener('change', (e) => {
             selectedRole = e.target.value;
-            if (selectedRole && !currentThreadId) {
+            if (selectedRole) {
                 startNewConversation();
             }
         });
@@ -161,6 +170,4 @@ document.addEventListener('DOMContentLoaded', () => {
             themeToggle.checked = true;
         }
     }
-
-    startNewConversation();
 });

@@ -1,5 +1,7 @@
 import os
+import time
 import psycopg2
+from psycopg2 import OperationalError
 from psycopg2.extras import Json
 from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
@@ -15,23 +17,51 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 # Create new assistant or load existing
 assistant_id = functions.create_assistant(client)
 
+def connect_with_retry(max_retries=5, retry_delay=5):
+    retries = 0
+    while retries < max_retries:
+        try:
+            return psycopg2.connect(DATABASE_URL)
+        except OperationalError as e:
+            if retries == max_retries - 1:
+                raise e
+            retries += 1
+            print(f"Database connection failed. Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+
 # Initialize PostgreSQL connection
 DATABASE_URL = os.getenv('DATABASE_URL')
-conn = psycopg2.connect(DATABASE_URL)
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set")
+
+try:
+    conn = connect_with_retry()
+    print("Successfully connected to the database")
+except OperationalError as e:
+    print(f"Failed to connect to the database after retries: {e}")
+    conn = None
 
 def init_db():
-    with conn.cursor() as cur:
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS conversations (
-                id SERIAL PRIMARY KEY,
-                thread_id TEXT,
-                role TEXT,
-                speaker TEXT,
-                message TEXT,
-                timestamp TIMESTAMP
-            )
-        ''')
-    conn.commit()
+    if conn is None:
+        print("Database connection is not available. Skipping table creation.")
+        return
+    try:
+        with conn.cursor() as cur:
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS conversations (
+                    id SERIAL PRIMARY KEY,
+                    thread_id TEXT,
+                    role TEXT,
+                    speaker TEXT,
+                    message TEXT,
+                    timestamp TIMESTAMP
+                )
+            ''')
+        conn.commit()
+        print("Database initialized successfully")
+    except psycopg2.Error as e:
+        print(f"Error initializing database: {e}")
+        conn.rollback()
 
 # Call init_db() at the start of your application
 init_db()
@@ -93,6 +123,9 @@ def chat():
                 json.dump({thread_id: [entry]}, f, indent=4)
 
     def save_message_to_db(thread_id, role, speaker, message):
+        if conn is None:
+            print("Database connection is not available. Skipping message save.")
+            return
         try:
             with conn.cursor() as cur:
                 cur.execute('''

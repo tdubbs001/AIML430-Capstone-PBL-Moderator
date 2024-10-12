@@ -11,11 +11,11 @@ app = Flask(__name__)
 # Database connection
 def get_db_connection():
     conn = psycopg2.connect(
-        host=os.getenv('PGHOST'),
-        database=os.getenv('PGDATABASE'),
-        user=os.getenv('PGUSER'),
-        password=os.getenv('PGPASSWORD'),
-        port=os.getenv('PGPORT')
+        host=os.getenv('PGHOST', 'localhost'),
+        database=os.getenv('PGDATABASE', 'bemori_db'),
+        user=os.getenv('PGUSER', 'bemori_user'),
+        password=os.getenv('PGPASSWORD', 'bemori_password'),
+        port=os.getenv('PGPORT', '5432')
     )
     return conn
 

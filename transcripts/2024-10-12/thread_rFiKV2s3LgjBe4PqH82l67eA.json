@@ -1,0 +1,16 @@
+{
+    "thread_rFiKV2s3LgjBe4PqH82l67eA": [
+        {
+            "speaker": "user",
+            "timestamp": "2024-10-12T02:16:42.473590Z",
+            "message": "Hi",
+            "role": "bilateral_aid_officer"
+        },
+        {
+            "speaker": "assistant",
+            "timestamp": "2024-10-12T02:16:44.484785Z",
+            "message": "Hello! How can I assist you today as a bilateral aid officer?",
+            "role": ""
+        }
+    ]
+}

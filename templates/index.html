@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +10,13 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="text-center mb-4">Bemori - Water For Life Simulation</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="text-center">Bemori - Water For Life Simulation</h1>
+            <label class="theme-switch">
+                <input type="checkbox" id="theme-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
         <div id="role-selection" class="mb-3">
             <label for="role-dropdown" class="form-label">Select your role:</label>
             <select id="role-dropdown" class="form-select">

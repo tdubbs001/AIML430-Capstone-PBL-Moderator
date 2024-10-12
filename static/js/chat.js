@@ -104,10 +104,19 @@ function showLoading(show) {
     }
 }
 
+function toggleTheme() {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-bs-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    html.setAttribute('data-bs-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const questionForm = document.getElementById('question-form');
     const questionInput = document.getElementById('question-input');
     const roleDropdown = document.getElementById('role-dropdown');
+    const themeToggle = document.getElementById('theme-toggle');
 
     questionForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -124,6 +133,18 @@ document.addEventListener('DOMContentLoaded', () => {
             startNewConversation();
         }
     });
+
+    themeToggle.addEventListener('change', toggleTheme);
+
+    // Set initial theme based on user preference or system setting
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        themeToggle.checked = savedTheme === 'dark';
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.setAttribute('data-bs-theme', 'dark');
+        themeToggle.checked = true;
+    }
 
     startNewConversation();
 });

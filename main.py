@@ -3,7 +3,6 @@ from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 import functions
 from datetime import datetime
-import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
@@ -25,25 +24,17 @@ def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Drop existing tables if they exist
-    cur.execute("DROP TABLE IF EXISTS messages")
-    cur.execute("DROP TABLE IF EXISTS conversations")
+    # Drop existing table if it exists
+    cur.execute("DROP TABLE IF EXISTS chat_messages")
     
     cur.execute('''
-        CREATE TABLE conversations (
+        CREATE TABLE chat_messages (
             id SERIAL PRIMARY KEY,
             role VARCHAR(255) NOT NULL,
             thread_id VARCHAR(255) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    cur.execute('''
-        CREATE TABLE messages (
-            id SERIAL PRIMARY KEY,
-            conversation_id INTEGER REFERENCES conversations(id),
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             sender VARCHAR(50) NOT NULL,
-            content TEXT NOT NULL,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            message_content TEXT NOT NULL
         )
     ''')
     conn.commit()
@@ -69,7 +60,7 @@ def start_conversation():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    cur.execute("SELECT thread_id FROM conversations WHERE role = %s ORDER BY created_at DESC LIMIT 1", (role,))
+    cur.execute("SELECT thread_id FROM chat_messages WHERE role = %s ORDER BY timestamp DESC LIMIT 1", (role,))
     existing_thread = cur.fetchone()
     
     if existing_thread:
@@ -77,7 +68,8 @@ def start_conversation():
     else:
         thread = client.beta.threads.create()
         thread_id = thread.id
-        cur.execute("INSERT INTO conversations (role, thread_id) VALUES (%s, %s)", (role, thread_id))
+        cur.execute("INSERT INTO chat_messages (role, thread_id, sender, message_content) VALUES (%s, %s, %s, %s)",
+                    (role, thread_id, 'system', 'Conversation started'))
     
     conn.commit()
     cur.close()
@@ -99,10 +91,8 @@ def chat():
     cur = conn.cursor()
 
     # Save user message to database
-    cur.execute("SELECT id FROM conversations WHERE thread_id = %s", (thread_id,))
-    conversation_id = cur.fetchone()[0]
-    cur.execute("INSERT INTO messages (conversation_id, sender, content) VALUES (%s, %s, %s)",
-                (conversation_id, 'user', user_input))
+    cur.execute("INSERT INTO chat_messages (role, thread_id, sender, message_content) VALUES (%s, %s, %s, %s)",
+                (user_role, thread_id, 'user', user_input))
 
     # Add the user's role and message to the thread
     client.beta.threads.messages.create(
@@ -128,8 +118,8 @@ def chat():
     assistant_response = messages.data[0].content[0].text.value
 
     # Save assistant response to database
-    cur.execute("INSERT INTO messages (conversation_id, sender, content) VALUES (%s, %s, %s)",
-                (conversation_id, 'assistant', assistant_response))
+    cur.execute("INSERT INTO chat_messages (role, thread_id, sender, message_content) VALUES (%s, %s, %s, %s)",
+                (user_role, thread_id, 'assistant', assistant_response))
 
     conn.commit()
     cur.close()

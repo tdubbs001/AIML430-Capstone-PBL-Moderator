@@ -1,17 +1,21 @@
 :root {
-  --background-color: #f0f0f0;
+  --background-color: #ffffff;
   --text-color: #333333;
   --user-message-color: #e6f2ff;
   --ai-message-color: #f0e6ff;
-  --accent-color: #4a90e2;
+  --accent-color: #0056b3;
+  --input-background: #f8f9fa;
+  --input-text: #495057;
 }
 
 [data-bs-theme="dark"] {
-  --background-color: #1a1a2e;
-  --text-color: #e0e0e0;
-  --user-message-color: #16213e;
-  --ai-message-color: #0f3460;
-  --accent-color: #e94560;
+  --background-color: #121212;
+  --text-color: #ffffff;
+  --user-message-color: #1e3a5f;
+  --ai-message-color: #2c1e3f;
+  --accent-color: #64b5f6;
+  --input-background: #2c2c2c;
+  --input-text: #e0e0e0;
 }
 
 body {
@@ -26,7 +30,8 @@ body {
 
 #chat-container {
   background-color: rgba(255, 255, 255, 0.1);
-  border-color: var(--accent-color);
+  border: 1px solid var(--accent-color);
+  border-radius: 8px;
 }
 
 .message-container {
@@ -60,14 +65,7 @@ body {
   margin-bottom: 5px;
   padding: 2px 5px;
   border-radius: 3px;
-}
-
-.user-message .message-header {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.assistant-message .message-header {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .message-content {
@@ -118,24 +116,25 @@ body {
   border-left: 4px solid var(--accent-color);
   padding-left: 1rem;
   margin-left: 0;
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 #role-dropdown {
-  background-color: var(--background-color);
-  color: var(--text-color);
+  background-color: var(--input-background);
+  color: var(--input-text);
   border-color: var(--accent-color);
 }
 
 #question-input {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--text-color);
+  background-color: var(--input-background);
+  color: var(--input-text);
   border-color: var(--accent-color);
 }
 
 #question-form button {
   background-color: var(--accent-color);
   border-color: var(--accent-color);
-  color: var(--text-color);
+  color: #ffffff;
 }
 
 #question-form button:hover {

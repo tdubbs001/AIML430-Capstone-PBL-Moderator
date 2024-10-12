@@ -38,7 +38,13 @@ function displayMessage(message, sender) {
     const chatContainer = document.getElementById('chat-container');
     const messageElement = document.createElement('div');
     messageElement.classList.add('message', `${sender}-message`);
-    messageElement.textContent = message;
+    
+    if (sender === 'assistant') {
+        messageElement.innerHTML = marked.parse(message);
+    } else {
+        messageElement.textContent = message;
+    }
+    
     chatContainer.appendChild(messageElement);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }

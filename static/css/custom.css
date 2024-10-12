@@ -26,3 +26,43 @@ body {
     color: var(--bs-light);
     align-self: flex-start;
 }
+
+/* Markdown styles */
+.assistant-message p {
+    margin-bottom: 0.5rem;
+}
+
+.assistant-message h1, .assistant-message h2, .assistant-message h3,
+.assistant-message h4, .assistant-message h5, .assistant-message h6 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.assistant-message ul, .assistant-message ol {
+    margin-bottom: 0.5rem;
+    padding-left: 1.5rem;
+}
+
+.assistant-message pre {
+    background-color: var(--bs-dark);
+    padding: 0.5rem;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.assistant-message code {
+    background-color: var(--bs-dark);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+}
+
+.assistant-message a {
+    color: var(--bs-info);
+}
+
+.assistant-message blockquote {
+    border-left: 4px solid var(--bs-info);
+    padding-left: 1rem;
+    margin-left: 0;
+    color: var(--bs-light);
+}

@@ -1,0 +1,122 @@
+import os
+from time import sleep
+from packaging import version
+from flask import Flask, request, jsonify
+import openai
+from openai import OpenAI
+import functions
+from datetime import datetime
+import json
+from apscheduler.schedulers.background import BackgroundScheduler
+import requests
+from pytz import timezone
+
+NZT = timezone('Pacific/Auckland')
+# Check OpenAI version is correct
+required_version = version.parse("1.1.1")
+current_version = version.parse(openai.__version__)
+OPENAI_API_KEY = os.environ['OPENAI_API_KEY']
+if current_version < required_version:
+  raise ValueError(f"Error: OpenAI version {openai.__version__}"
+                   " is less than the required version 1.1.1")
+else:
+  print("OpenAI version is compatible.")
+
+# Start Flask app
+app = Flask(__name__)
+
+# Init client
+client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY')) # should use env variable OPENAI_API_KEY in secrets (bottom left corner)
+
+# Create new assistant or load existing
+assistant_id = functions.create_assistant(client)
+
+# Create the transcript folder with today's date
+today_date_folder = os.path.join('transcripts', datetime.utcnow().strftime("%Y-%m-%d"))
+if not os.path.exists(today_date_folder):
+    os.makedirs(today_date_folder)
+
+# Start conversation thread
+@app.route('/start', methods=['GET'])
+def start_conversation():
+  print("Starting a new conversation...")  # Debugging line
+  thread = client.beta.threads.create()
+  print(f"New thread created with ID: {thread.id}")  # Debugging line
+  return jsonify({"thread_id": thread.id})
+
+# Generate response
+@app.route('/chat', methods=['POST'])
+def chat():
+  data = request.json
+  thread_id = data.get('thread_id')
+  user_input = data.get('message', '')
+
+  if not thread_id:
+    print("Error: Missing thread_id")  # Debugging line
+    return jsonify({"error": "Missing thread_id"}), 400
+
+  print(f"Received message: {user_input} for thread ID: {thread_id}"
+        )  # Debugging line
+
+  # Define the file name based on the thread_id and save it in today’s date folder
+  log_filename = os.path.join(today_date_folder, f"{thread_id}.json")
+
+  # Function to append a message to the JSON log file
+  def append_message_to_json_file(filename, thread_id, speaker, message):
+      entry = {
+          "speaker": speaker,
+          "timestamp": datetime.utcnow().isoformat() + "Z",
+          "message": message
+      }
+      try:
+          with open(filename, "r+") as f:
+              data = json.load(f)
+              # Check if the thread_id key exists, otherwise create it
+              if thread_id not in data:
+                  data[thread_id] = []
+              data[thread_id].append(entry)
+              f.seek(0)
+              json.dump(data, f, indent=4)
+      except (FileNotFoundError, json.JSONDecodeError):
+          # If file does not exist or is empty/corrupted, start a new data structure
+          with open(filename, "w") as f:
+              json.dump({thread_id: [entry]}, f, indent=4)
+
+  # Append user message to the JSON log
+  append_message_to_json_file(log_filename, thread_id, "user", user_input)
+
+  # Add the user's message to the thread
+  client.beta.threads.messages.create(thread_id=thread_id,
+                                      role="user",
+                                      content=user_input)
+
+  # Run the Assistant
+  run = client.beta.threads.runs.create(thread_id=thread_id,
+                                        assistant_id=assistant_id)
+
+  # Check if the Run requires action (function call)
+  while True:
+    run_status = client.beta.threads.runs.retrieve(thread_id=thread_id,
+                                                   run_id=run.id)
+    print(f"Run status: {run_status.status}")
+    if run_status.status == 'completed':
+      break
+    sleep(1)  # Wait for a second before checking again
+
+  # Retrieve and return the latest message from the assistant
+  messages = client.beta.threads.messages.list(thread_id=thread_id)
+  assistant_response = messages.data[0].content[0].text.value
+
+  # Append assistant's response to the JSON log
+  append_message_to_json_file(log_filename, thread_id, "assistant", assistant_response)
+
+
+  print(f"Assistant response: {assistant_response}")  # Debugging line
+  return jsonify({"response": assistant_response})
+
+try:
+  # Run server
+  if __name__ == '__main__':
+      app.run(host='0.0.0.0', port=8080)
+except (KeyboardInterrupt, SystemExit):
+  scheduler.shutdown()

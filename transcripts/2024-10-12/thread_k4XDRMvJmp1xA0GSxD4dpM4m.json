@@ -1,0 +1,16 @@
+{
+    "thread_k4XDRMvJmp1xA0GSxD4dpM4m": [
+        {
+            "speaker": "user",
+            "timestamp": "2024-10-12T02:13:59.463086Z",
+            "message": "HI",
+            "role": "undp_water_project_manager"
+        },
+        {
+            "speaker": "assistant",
+            "timestamp": "2024-10-12T02:14:01.274034Z",
+            "message": "Hello! How can I assist you with your UNDP water project today?",
+            "role": ""
+        }
+    ]
+}

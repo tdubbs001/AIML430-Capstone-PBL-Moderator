@@ -62,9 +62,7 @@ function sendMessage(message) {
 }
 
 function formatRole(role) {
-    return roleNames[role] || role.split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+    return roleNames[role] || role; // If the role is not in the dictionary, return it as is
 }
 
 function displayMessage(message, sender) {

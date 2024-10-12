@@ -49,6 +49,12 @@ function sendMessage(message) {
     });
 }
 
+function formatRole(role) {
+    return role.split('_')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ');
+}
+
 function displayMessage(message, sender) {
     const chatMessages = document.getElementById('chat-messages');
     const messageContainer = document.createElement('div');
@@ -59,7 +65,7 @@ function displayMessage(message, sender) {
     
     const messageHeader = document.createElement('div');
     messageHeader.classList.add('message-header');
-    messageHeader.textContent = sender === 'user' ? selectedRole : 'AI Assistant';
+    messageHeader.textContent = sender === 'user' ? formatRole(selectedRole) : 'AI Assistant';
     
     const messageContent = document.createElement('div');
     messageContent.classList.add('message-content');

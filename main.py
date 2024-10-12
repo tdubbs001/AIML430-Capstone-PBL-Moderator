@@ -37,7 +37,7 @@ def chat():
     if not thread_id:
         return jsonify({"error": "Missing thread_id"}), 400
 
-    log_filename = os.path.join(today_date_folder, f"{thread_id}.json")
+    log_filename = os.path.join(today_date_folder, f"{user_role}_thread_{thread_id}.json")
 
     def append_message_to_json_file(filename, thread_id, speaker, message, role=''):
         entry = {
@@ -49,14 +49,14 @@ def chat():
         try:
             with open(filename, "r+") as f:
                 data = json.load(f)
-                if thread_id not in data:
-                    data[thread_id] = []
-                data[thread_id].append(entry)
+                if f"{role}_thread_{thread_id}" not in data:
+                    data[f"{role}_thread_{thread_id}"] = []
+                data[f"{role}_thread_{thread_id}"].append(entry)
                 f.seek(0)
                 json.dump(data, f, indent=4)
         except (FileNotFoundError, json.JSONDecodeError):
             with open(filename, "w") as f:
-                json.dump({thread_id: [entry]}, f, indent=4)
+                json.dump({f"{role}_thread_{thread_id}": [entry]}, f, indent=4)
 
     append_message_to_json_file(log_filename, thread_id, "user", user_input, user_role)
 
@@ -83,7 +83,7 @@ def chat():
     messages = client.beta.threads.messages.list(thread_id=thread_id)
     assistant_response = messages.data[0].content[0].text.value
 
-    append_message_to_json_file(log_filename, thread_id, "assistant", assistant_response)
+    append_message_to_json_file(log_filename, thread_id, "assistant", assistant_response, user_role)
 
     return jsonify({"response": assistant_response})
 

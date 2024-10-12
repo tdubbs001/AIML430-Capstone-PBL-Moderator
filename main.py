@@ -37,28 +37,33 @@ def chat():
     if not thread_id:
         return jsonify({"error": "Missing thread_id"}), 400
 
-    log_filename = os.path.join(today_date_folder, f"{user_role}_thread_{thread_id}.json")
+    # Create role-specific folder
+    role_folder = os.path.join(today_date_folder, user_role)
+    if not os.path.exists(role_folder):
+        os.makedirs(role_folder)
 
-    def append_message_to_json_file(filename, thread_id, speaker, message, role=''):
+    # Update log_filename to use the new folder structure
+    log_filename = os.path.join(role_folder, f"thread_{thread_id}.json")
+
+    def append_message_to_json_file(filename, thread_id, speaker, message):
         entry = {
             "speaker": speaker,
             "timestamp": datetime.utcnow().isoformat() + "Z",
-            "message": message,
-            "role": role
+            "message": message
         }
         try:
             with open(filename, "r+") as f:
                 data = json.load(f)
-                if f"{role}_thread_{thread_id}" not in data:
-                    data[f"{role}_thread_{thread_id}"] = []
-                data[f"{role}_thread_{thread_id}"].append(entry)
+                if thread_id not in data:
+                    data[thread_id] = []
+                data[thread_id].append(entry)
                 f.seek(0)
                 json.dump(data, f, indent=4)
         except (FileNotFoundError, json.JSONDecodeError):
             with open(filename, "w") as f:
-                json.dump({f"{role}_thread_{thread_id}": [entry]}, f, indent=4)
+                json.dump({thread_id: [entry]}, f, indent=4)
 
-    append_message_to_json_file(log_filename, thread_id, "user", user_input, user_role)
+    append_message_to_json_file(log_filename, thread_id, "user", user_input)
 
     # Add the user's role and message to the thread
     client.beta.threads.messages.create(
@@ -83,7 +88,7 @@ def chat():
     messages = client.beta.threads.messages.list(thread_id=thread_id)
     assistant_response = messages.data[0].content[0].text.value
 
-    append_message_to_json_file(log_filename, thread_id, "assistant", assistant_response, user_role)
+    append_message_to_json_file(log_filename, thread_id, "assistant", assistant_response)
 
     return jsonify({"response": assistant_response})
 

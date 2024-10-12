@@ -4,16 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bemori - Water For Life Simulation</title>
-    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1 class="text-center mb-4">Bemori - Water For Life Simulation</h1>
-        <div id="role-selection" class="mb-3">
-            <label for="role-dropdown" class="form-label">Select your role:</label>
-            <select id="role-dropdown" class="form-select">
+        <h1>Bemori - Water For Life Simulation</h1>
+        <div id="role-selection">
+            <label for="role-dropdown">Select your role:</label>
+            <select id="role-dropdown">
                 <option value="">Select a role</option>
                 <option value="undp_head">UNDP – Head of Environment and Energy Section</option>
                 <option value="undp_water_project_manager">UNDP Water Project Manager (United Nations Volunteer)</option>
@@ -27,15 +26,15 @@
                 <option value="water_division_director">Director of the Water Division in the Ministry of Infrastructure</option>
             </select>
         </div>
-        <div id="chat-container" class="border rounded p-3 mb-3" style="height: 400px; overflow-y: auto;">
+        <div id="chat-container">
             <div id="chat-messages"></div>
         </div>
-        <form id="question-form" class="d-flex">
-            <input type="text" id="question-input" class="form-control me-2" placeholder="Ask a question about your project..." required>
-            <button type="submit" class="btn btn-primary">Send</button>
+        <form id="question-form">
+            <input type="text" id="question-input" placeholder="Ask a question about your project..." required>
+            <button type="submit">Send</button>
         </form>
-        <div class="loading d-none mt-3">Thinking...</div>
+        <div class="loading">Thinking</div>
     </div>
-    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

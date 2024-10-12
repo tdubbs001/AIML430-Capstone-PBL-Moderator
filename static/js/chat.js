@@ -1,11 +1,12 @@
 let currentThreadId = null;
+let selectedRole = null;
 
 function startNewConversation() {
     fetch('/start')
         .then(response => response.json())
         .then(data => {
             currentThreadId = data.thread_id;
-            document.getElementById('chat-container').innerHTML = '';
+            document.getElementById('chat-messages').innerHTML = '';
         })
         .catch(error => console.error('Error:', error));
 }
@@ -16,6 +17,13 @@ function sendMessage(message) {
         return;
     }
 
+    if (!selectedRole) {
+        alert('Please select a role before sending a message.');
+        return;
+    }
+
+    showLoading(true);
+
     fetch('/chat', {
         method: 'POST',
         headers: {
@@ -23,19 +31,24 @@ function sendMessage(message) {
         },
         body: JSON.stringify({
             thread_id: currentThreadId,
-            message: message
+            message: message,
+            role: selectedRole
         }),
     })
     .then(response => response.json())
     .then(data => {
         displayMessage(message, 'user');
         displayMessage(data.response, 'assistant');
+        showLoading(false);
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+        showLoading(false);
+    });
 }
 
 function displayMessage(message, sender) {
-    const chatContainer = document.getElementById('chat-container');
+    const chatMessages = document.getElementById('chat-messages');
     const messageElement = document.createElement('div');
     messageElement.classList.add('message', `${sender}-message`);
     
@@ -45,25 +58,39 @@ function displayMessage(message, sender) {
         messageElement.textContent = message;
     }
     
-    chatContainer.appendChild(messageElement);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    chatMessages.appendChild(messageElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function showLoading(show) {
+    const loadingElement = document.querySelector('.loading');
+    if (show) {
+        loadingElement.classList.remove('d-none');
+    } else {
+        loadingElement.classList.add('d-none');
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const chatForm = document.getElementById('chat-form');
-    const userInput = document.getElementById('user-input');
-    const newConversationBtn = document.getElementById('new-conversation');
+    const questionForm = document.getElementById('question-form');
+    const questionInput = document.getElementById('question-input');
+    const roleDropdown = document.getElementById('role-dropdown');
 
-    chatForm.addEventListener('submit', (e) => {
+    questionForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const message = userInput.value.trim();
+        const message = questionInput.value.trim();
         if (message) {
             sendMessage(message);
-            userInput.value = '';
+            questionInput.value = '';
         }
     });
 
-    newConversationBtn.addEventListener('click', startNewConversation);
+    roleDropdown.addEventListener('change', (e) => {
+        selectedRole = e.target.value;
+        if (selectedRole && !currentThreadId) {
+            startNewConversation();
+        }
+    });
 
     // Start a new conversation when the page loads
     startNewConversation();

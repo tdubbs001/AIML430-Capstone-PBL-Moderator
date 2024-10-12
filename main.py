@@ -32,17 +32,19 @@ def chat():
     data = request.json
     thread_id = data.get('thread_id')
     user_input = data.get('message', '')
+    user_role = data.get('role', '')
 
     if not thread_id:
         return jsonify({"error": "Missing thread_id"}), 400
 
     log_filename = os.path.join(today_date_folder, f"{thread_id}.json")
 
-    def append_message_to_json_file(filename, thread_id, speaker, message):
+    def append_message_to_json_file(filename, thread_id, speaker, message, role=''):
         entry = {
             "speaker": speaker,
             "timestamp": datetime.utcnow().isoformat() + "Z",
-            "message": message
+            "message": message,
+            "role": role
         }
         try:
             with open(filename, "r+") as f:
@@ -56,18 +58,25 @@ def chat():
             with open(filename, "w") as f:
                 json.dump({thread_id: [entry]}, f, indent=4)
 
-    append_message_to_json_file(log_filename, thread_id, "user", user_input)
+    append_message_to_json_file(log_filename, thread_id, "user", user_input, user_role)
 
-    client.beta.threads.messages.create(thread_id=thread_id,
-                                        role="user",
-                                        content=user_input)
+    # Add the user's role and message to the thread
+    client.beta.threads.messages.create(
+        thread_id=thread_id,
+        role="user",
+        content=f"[Role: {user_role}] {user_input}"
+    )
 
-    run = client.beta.threads.runs.create(thread_id=thread_id,
-                                          assistant_id=assistant_id)
+    run = client.beta.threads.runs.create(
+        thread_id=thread_id,
+        assistant_id=assistant_id
+    )
 
     while True:
-        run_status = client.beta.threads.runs.retrieve(thread_id=thread_id,
-                                                       run_id=run.id)
+        run_status = client.beta.threads.runs.retrieve(
+            thread_id=thread_id,
+            run_id=run.id
+        )
         if run_status.status == 'completed':
             break
 

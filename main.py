@@ -24,11 +24,8 @@ def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Drop existing table if it exists
-    cur.execute("DROP TABLE IF EXISTS chat_messages")
-    
     cur.execute('''
-        CREATE TABLE chat_messages (
+        CREATE TABLE IF NOT EXISTS chat_messages (
             id SERIAL PRIMARY KEY,
             role VARCHAR(255) NOT NULL,
             thread_id VARCHAR(255) NOT NULL,
@@ -40,6 +37,21 @@ def init_db():
     conn.commit()
     cur.close()
     conn.close()
+
+# Test database connection and table creation
+def test_db_connection():
+    try:
+        init_db()
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM chat_messages LIMIT 1")
+        cur.close()
+        conn.close()
+        print("Database connection successful and table exists.")
+        return True
+    except Exception as e:
+        print(f"Error connecting to the database: {str(e)}")
+        return False
 
 # Init client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -128,5 +140,7 @@ def chat():
     return jsonify({"response": assistant_response})
 
 if __name__ == '__main__':
-    init_db()
-    app.run(host='0.0.0.0', port=5000)
+    if test_db_connection():
+        app.run(host='0.0.0.0', port=5000)
+    else:
+        print("Failed to connect to the database. Please check your configuration.")

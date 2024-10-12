@@ -25,7 +25,7 @@ function startNewConversation() {
             currentThreadId = data.thread_id;
             document.getElementById('chat-messages').innerHTML = '';
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => console.error('Error:', error.message || 'An unknown error occurred'));
 }
 
 function sendMessage(message) {
@@ -66,7 +66,7 @@ function sendMessage(message) {
         showLoading(false);
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Error:', error.message || 'An unknown error occurred');
         showLoading(false);
     });
 }

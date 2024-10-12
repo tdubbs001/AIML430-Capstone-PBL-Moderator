@@ -12,8 +12,13 @@ body {
     border-color: var(--bs-secondary);
 }
 
-.message {
+.message-container {
+    display: flex;
+    flex-direction: column;
     margin-bottom: 15px;
+}
+
+.message {
     padding: 12px;
     border-radius: 8px;
     max-width: 80%;
@@ -30,6 +35,30 @@ body {
     background-color: var(--bs-secondary);
     color: var(--bs-light);
     align-self: flex-start;
+}
+
+.message-header {
+    font-size: 0.9em;
+    font-weight: bold;
+    margin-bottom: 5px;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+.user-message .message-header {
+    background-color: var(--bs-primary);
+    color: var(--bs-light);
+    align-self: flex-end;
+    text-align: right;
+}
+
+.assistant-message .message-header {
+    background-color: var(--bs-secondary);
+    color: var(--bs-light);
+}
+
+.message-content {
+    margin-top: 5px;
 }
 
 .loading {
@@ -76,25 +105,4 @@ body {
     padding-left: 1rem;
     margin-left: 0;
     color: var(--bs-light);
-}
-
-/* New styles for better differentiation */
-.message-container {
-    display: flex;
-    flex-direction: column;
-}
-
-.message-header {
-    font-size: 0.8em;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-.user-message .message-header {
-    text-align: right;
-    color: var(--bs-info);
-}
-
-.assistant-message .message-header {
-    color: var(--bs-warning);
 }

@@ -61,8 +61,6 @@ function displayMessage(message, sender) {
     messageHeader.classList.add('message-header');
     messageHeader.textContent = sender === 'user' ? selectedRole : 'AI Assistant';
     
-    messageElement.appendChild(messageHeader);
-    
     const messageContent = document.createElement('div');
     messageContent.classList.add('message-content');
     
@@ -72,6 +70,7 @@ function displayMessage(message, sender) {
         messageContent.textContent = message;
     }
     
+    messageElement.appendChild(messageHeader);
     messageElement.appendChild(messageContent);
     messageContainer.appendChild(messageElement);
     chatMessages.appendChild(messageContainer);

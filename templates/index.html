@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant Chat</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="/static/css/custom.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">AI Assistant Chat</h1>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div id="chat-container" class="border rounded p-3 mb-3" style="height: 400px; overflow-y: auto;">
+                    <!-- Chat messages will be displayed here -->
+                </div>
+                <form id="chat-form" class="d-flex">
+                    <input type="text" id="user-input" class="form-control me-2" placeholder="Type your message...">
+                    <button type="submit" class="btn btn-primary">Send</button>
+                </form>
+                <button id="new-conversation" class="btn btn-secondary mt-3">Start New Conversation</button>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/chat.js"></script>
+</body>
+</html>

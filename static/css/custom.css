@@ -1,0 +1,28 @@
+/* Custom styles */
+body {
+    background-color: var(--bs-dark);
+    color: var(--bs-light);
+}
+
+#chat-container {
+    background-color: var(--bs-dark);
+    border-color: var(--bs-secondary);
+}
+
+.message {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.user-message {
+    background-color: var(--bs-primary);
+    color: var(--bs-light);
+    align-self: flex-end;
+}
+
+.assistant-message {
+    background-color: var(--bs-secondary);
+    color: var(--bs-light);
+    align-self: flex-start;
+}

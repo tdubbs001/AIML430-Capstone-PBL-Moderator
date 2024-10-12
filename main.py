@@ -41,17 +41,6 @@ def init_db():
     cur.close()
     conn.close()
 
-# Clear database function
-def clear_database():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("""DROP SCHEMA public CASCADE;
-CREATE SCHEMA public;""")
-    conn.commit()
-    cur.close()
-    conn.close()
-    init_db()
-
 # Init client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
@@ -137,11 +126,6 @@ def chat():
     conn.close()
 
     return jsonify({"response": assistant_response})
-
-@app.route('/clear_db', methods=['GET'])
-def clear_db():
-    clear_database()
-    return jsonify({'message': 'Database cleared and reinitialized'})
 
 if __name__ == '__main__':
     init_db()

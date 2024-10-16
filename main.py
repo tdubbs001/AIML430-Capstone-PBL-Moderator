@@ -151,6 +151,32 @@ def chat():
     return jsonify({"response": assistant_response})
 
 @app.route('/end_session', methods=['POST'])
+
+def analyze_transcript_with_openai(transcript):
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an AI assistant analyzing a conversation transcript about water management in Bemori. Provide a concise update on the key points discussed."},
+                {"role": "user", "content": f"Analyze this transcript and provide a brief update on the key points:\n\n{transcript}"}
+            ]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"Error in analyzing transcript: {str(e)}")
+        return None
+
+def save_simulation_updates(session, role, update):
+    if not update:
+        return
+
+    new_update = SimulationUpdate(
+        role_type=role,
+        update_content=update  # Changed from 'update' to 'update_content'
+    )
+    session.add(new_update)
+    session.commit()
+
 def end_session():
     data = request.json
     thread_id = data.get('thread_id')
@@ -176,6 +202,10 @@ def end_session():
             transcript=transcript_text
         )
         session.add(new_transcript)
+
+    update = analyze_transcript_with_openai(transcript_text)
+    if update:
+        save_simulation_updates(session, role, update)
     
     # Mark the session as ended in the database
     end_message = Message(thread_id=thread_id, role_type=role, sender='system', message='Session ended')
@@ -183,8 +213,12 @@ def end_session():
     
     session.commit()
     session.close()
+
     
-    return jsonify({"status": "success", "message": "Session ended and transcript saved"})
+    
+    return jsonify({"status": "success", "message": "Session ended, transcript saved and simulation updated"})
+    
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+

@@ -31,7 +31,6 @@ class Message(Base):
     sender = Column(String, nullable=False)
     message = Column(Text, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
-    session_status = Column(String, default='active')
 
 # Create tables
 Base.metadata.create_all(engine)
@@ -113,32 +112,6 @@ def chat():
     session.close()
 
     return jsonify({"response": assistant_response})
-
-@app.route('/end_session', methods=['POST'])
-def end_session():
-    data = request.json
-    thread_id = data.get('thread_id')
-    user_role = data.get('role')
-    
-    if not thread_id or not user_role:
-        return jsonify({"error": "Missing thread_id or role"}), 400
-    
-    session = Session()
-    try:
-        # Update all messages in the thread to 'ended'
-        session.query(Message).filter_by(thread_id=thread_id).update({"session_status": "ended"})
-        
-        # Add a system message to mark the end of the session
-        end_message = Message(thread_id=thread_id, role_type=user_role, sender='system', message='Session ended', session_status='ended')
-        session.add(end_message)
-        
-        session.commit()
-        return jsonify({"message": "Session ended successfully"}), 200
-    except Exception as e:
-        session.rollback()
-        return jsonify({"error": str(e)}), 500
-    finally:
-        session.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

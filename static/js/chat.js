@@ -148,45 +148,11 @@ function toggleTheme() {
     localStorage.setItem('theme', newTheme);
 }
 
-function endSession() {
-    if (!currentThreadId || !selectedRole) {
-        console.error('No active conversation or role selected');
-        return;
-    }
-
-    fetch('/end_session', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            thread_id: currentThreadId,
-            role: selectedRole
-        }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            console.error('Error ending session:', data.error);
-        } else {
-            console.log('Session ended successfully');
-            displaySystemMessage('Session ended');
-            currentThreadId = null;
-            selectedRole = null;
-            document.getElementById('role-dropdown').value = '';
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     const questionForm = document.getElementById('question-form');
     const questionInput = document.getElementById('question-input');
     const roleDropdown = document.getElementById('role-dropdown');
     const themeToggle = document.getElementById('theme-toggle');
-    const endSessionBtn = document.getElementById('end-session-btn');
 
     if (questionForm) {
         questionForm.addEventListener('submit', (e) => {
@@ -214,17 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (themeToggle) {
         themeToggle.addEventListener('change', toggleTheme);
-    }
-
-    if (endSessionBtn) {
-        endSessionBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (currentThreadId) {
-                endSession();
-            } else {
-                alert('No active session to end.');
-            }
-        });
     }
 
     // Set initial theme based on user preference or system setting

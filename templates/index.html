@@ -36,10 +36,15 @@
         <div id="chat-container" class="border rounded p-3 mb-3" style="height: 400px; overflow-y: auto;">
             <div id="chat-messages"></div>
         </div>
-        <form id="question-form" class="d-flex">
+        <form id="question-form" class="d-flex mb-3">
             <input type="text" id="question-input" class="form-control me-2" placeholder="Ask a question about your project..." required>
             <button type="submit" class="btn btn-primary">Send</button>
         </form>
+        <button id="review-session" class="btn btn-secondary mb-3">Review Session</button>
+        <div id="session-summary" class="border rounded p-3 mb-3 d-none">
+            <h4>Session Summary</h4>
+            <p id="summary-content"></p>
+        </div>
         <div class="loading d-none mt-3">Thinking...</div>
     </div>
     <script src="{{ url_for('static', filename='js/chat.js') }}"></script>

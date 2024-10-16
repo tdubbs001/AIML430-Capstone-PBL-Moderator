@@ -177,6 +177,15 @@ def end_session():
         )
         session.add(new_transcript)
     
+    # Analyze transcript with OpenAI
+    analysis = analyze_transcript_with_openai(transcript_text)
+
+    # Parse analysis and extract updates
+    updates = parse_analysis_for_updates(analysis)
+
+    # Save updates to simulation_updates table
+    save_simulation_updates(session, thread_id, role, updates)
+    
     # Mark the session as ended in the database
     end_message = Message(thread_id=thread_id, role_type=role, sender='system', message='Session ended')
     session.add(end_message)
@@ -184,7 +193,72 @@ def end_session():
     session.commit()
     session.close()
     
-    return jsonify({"status": "success", "message": "Session ended and transcript saved"})
+    return jsonify({"status": "success", "message": "Session ended, transcript saved, and simulation updated"})
+
+def analyze_transcript_with_openai(transcript):
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an AI assistant analyzing a conversation transcript about water management in Bemori. Extract key information about water levels, population, and resources."},
+                {"role": "user", "content": f"Analyze this transcript and provide a summary of the key points related to water levels, population, and resources:\n\n{transcript}"}
+            ]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"Error in analyzing transcript: {str(e)}")
+        return None
+
+def parse_analysis_for_updates(analysis):
+    if not analysis:
+        return None
+    
+    updates = {
+        'water_level': 0.0,
+        'population': 0,
+        'resources': 0.0
+    }
+    
+    # Simple parsing logic (this can be improved with more sophisticated NLP techniques)
+    if "water level" in analysis.lower():
+        water_level_index = analysis.lower().index("water level")
+        water_level_text = analysis[water_level_index:water_level_index+50]  # Grab next 50 characters
+        try:
+            updates['water_level'] = float(water_level_text.split()[2])  # Assume the number is the third word
+        except:
+            pass
+    
+    if "population" in analysis.lower():
+        population_index = analysis.lower().index("population")
+        population_text = analysis[population_index:population_index+50]
+        try:
+            updates['population'] = int(population_text.split()[1])  # Assume the number is the second word
+        except:
+            pass
+    
+    if "resources" in analysis.lower():
+        resources_index = analysis.lower().index("resources")
+        resources_text = analysis[resources_index:resources_index+50]
+        try:
+            updates['resources'] = float(resources_text.split()[1])  # Assume the number is the second word
+        except:
+            pass
+    
+    return updates
+
+def save_simulation_updates(session, thread_id, role, updates):
+    if not updates:
+        return
+    
+    new_update = SimulationUpdate(
+        thread_id=thread_id,
+        role_type=role,
+        water_level=updates['water_level'],
+        population=updates['population'],
+        resources=updates['resources']
+    )
+    session.add(new_update)
+    session.commit()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 import functions
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -30,6 +30,18 @@ class Message(Base):
     role_type = Column(String, nullable=False)
     sender = Column(String, nullable=False)
     message = Column(Text, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+# Define SimulationUpdate model
+class SimulationUpdate(Base):
+    __tablename__ = 'simulation_updates'
+
+    id = Column(Integer, primary_key=True)
+    thread_id = Column(String, nullable=False)
+    role_type = Column(String, nullable=False)
+    water_level = Column(Float, nullable=False)
+    population = Column(Integer, nullable=False)
+    resources = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
 # Create tables

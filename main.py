@@ -158,14 +158,33 @@ def end_session():
     
     session = Session()
     
+    # Fetch all messages for the thread
+    messages = session.query(Message).filter_by(thread_id=thread_id, role_type=role).order_by(Message.timestamp).all()
+    
+    # Compile messages into a transcript
+    transcript_text = "\n".join([f"{msg.sender.capitalize()}: {msg.message}" for msg in messages])
+    
+    # Update or create transcript
+    transcript = session.query(Transcript).filter_by(thread_id=thread_id, role_type=role).first()
+    if transcript:
+        transcript.transcript = transcript_text
+        transcript.updated_at = datetime.utcnow()
+    else:
+        new_transcript = Transcript(
+            thread_id=thread_id,
+            role_type=role,
+            transcript=transcript_text
+        )
+        session.add(new_transcript)
+    
     # Mark the session as ended in the database
     end_message = Message(thread_id=thread_id, role_type=role, sender='system', message='Session ended')
     session.add(end_message)
-    session.commit()
     
+    session.commit()
     session.close()
     
-    return jsonify({"status": "success"})
+    return jsonify({"status": "success", "message": "Session ended and transcript saved"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

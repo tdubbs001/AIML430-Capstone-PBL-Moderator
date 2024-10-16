@@ -14,6 +14,21 @@ const roleNames = {
     'water_division_director': 'Director of the Water Division in the Ministry of Infrastructure'
 };
 
+function endCurrentSession() {
+    if (currentThreadId) {
+        fetch('/end_session', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                thread_id: currentThreadId,
+                role: selectedRole
+            }),
+        }).catch(error => console.error('Error ending session:', error));
+    }
+}
+
 function startNewConversation() {
     if (!selectedRole) {
         console.error('No role selected');
@@ -171,6 +186,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (roleDropdown) {
         roleDropdown.addEventListener('change', (e) => {
+            if (selectedRole) {
+                endCurrentSession();
+            }
             selectedRole = e.target.value;
             if (selectedRole) {
                 startNewConversation();
@@ -195,4 +213,9 @@ document.addEventListener('DOMContentLoaded', () => {
             themeToggle.checked = true;
         }
     }
+
+    // Add beforeunload event listener
+    window.addEventListener('beforeunload', (event) => {
+        endCurrentSession();
+    });
 });

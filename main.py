@@ -113,5 +113,22 @@ def chat():
 
     return jsonify({"response": assistant_response})
 
+@app.route('/end_session', methods=['POST'])
+def end_session():
+    data = request.json
+    thread_id = data.get('thread_id')
+    role = data.get('role')
+    
+    session = Session()
+    
+    # Mark the session as ended in the database
+    end_message = Message(thread_id=thread_id, role_type=role, sender='system', message='Session ended')
+    session.add(end_message)
+    session.commit()
+    
+    session.close()
+    
+    return jsonify({"status": "success"})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

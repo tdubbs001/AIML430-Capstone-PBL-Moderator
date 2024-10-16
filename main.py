@@ -55,6 +55,16 @@ class Transcript(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+# Define TranscriptAnalysis model
+class TranscriptAnalysis(Base):
+    __tablename__ = 'transcript_analysis'
+
+    id = Column(Integer, primary_key=True)
+    thread_id = Column(String, nullable=False)
+    role_type = Column(String, nullable=False)
+    analysis = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 # Create tables
 Base.metadata.create_all(engine)
 

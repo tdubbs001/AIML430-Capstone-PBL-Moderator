@@ -56,7 +56,7 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "psql $DATABASE_URL -c \"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'transcripts');\""
+args = "psql $DATABASE_URL -c \"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'transcript_analysis');\""
 
 [deployment]
 run = ["sh", "-c", "python main.py"]

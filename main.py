@@ -262,8 +262,8 @@ def periodic_analysis():
     try:
         session = Session()
         # Get all active threads from the last 24 hours
-        cutoff_time = datetime.utcnow() - timedelta(hours=24)
-        recent_threads = session.query(Message.thread_id, Message.role_type).filter(Message.timestamp > cutoff_time).distinct().all()
+        cutoff_time = datetime.utcnow() - timedelta(minutes=15)
+        recent_threads = session.query(Transcript.thread_id, Transcript.role_type).filter(Transcript.timestamp > cutoff_time).distinct().all()
         
         logger.info(f"Found {len(recent_threads)} recent threads to analyze")
         
@@ -278,7 +278,7 @@ def periodic_analysis():
 
 # Set up the scheduler
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=periodic_analysis, trigger="interval", minutes=1)  # Changed from hours=1 to minutes=1 for testing
+scheduler.add_job(func=periodic_analysis, trigger="interval", minutes=15)  # Changed from hours=1 to minutes=1 for testing
 scheduler.start()
 logger.info("Scheduler started with periodic_analysis job")
 

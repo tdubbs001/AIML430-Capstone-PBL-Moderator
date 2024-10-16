@@ -162,7 +162,7 @@ def end_session():
     messages = session.query(Message).filter_by(thread_id=thread_id, role_type=role).order_by(Message.timestamp).all()
     
     # Compile messages into a transcript
-    transcript_text = "\n".join([f"{msg.sender.capitalize()}: {msg.message}" for msg in messages])
+    transcript_text = "\n\n".join([f"{msg.sender.capitalize()} ({msg.timestamp.strftime('%Y-%m-%d %H:%M:%S')}): {msg.message}" for msg in messages])
     
     # Update or create transcript
     transcript = session.query(Transcript).filter_by(thread_id=thread_id, role_type=role).first()

@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 import functions
 from datetime import datetime, timedelta
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -60,6 +60,7 @@ class Transcript(Base):
     transcript = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    analyzed = Column(Boolean, default=False)  # New column to track if the transcript has been analyzed
 
 # Define TranscriptAnalysis model
 class TranscriptAnalysis(Base):
@@ -75,18 +76,7 @@ class TranscriptAnalysis(Base):
 Base.metadata.create_all(engine)
 
 # Dictionary to store thread IDs for each role
-role_threads = {
-    'undp_head': None,
-    'undp_water_project_manager': None,
-    'local_government_official': None,
-    'local_ngo_officer': None,
-    'international_ngo_officer': None,
-    'bilateral_aid_officer': None,
-    'eu_officer': None,
-    'village_chief': None,
-    'womens_group_rep': None,
-    'water_division_director': None
-}
+role_threads = {}
 
 @app.route('/')
 def index():
@@ -97,23 +87,31 @@ def start_conversation():
     role = request.args.get('role')
     session = Session()
     
-    if role_threads[role] is None:
+    if role in role_threads:
+        thread_id = role_threads[role]
+    else:
         thread = client.beta.threads.create()
-        role_threads[role] = thread.id
-        
+        thread_id = thread.id
+        role_threads[role] = thread_id
+    
+    # Check if thread exists in database
+    existing_message = session.query(Message).filter_by(thread_id=thread_id).first()
+    if not existing_message:
         # Create a new thread entry in the database
-        new_message = Message(thread_id=thread.id, role_type=role, sender='system', message='Conversation started')
+        new_message = Message(thread_id=thread_id, role_type=role, sender='system', message='Conversation started')
         session.add(new_message)
         session.commit()
     
     session.close()
-    return jsonify({"thread_id": role_threads[role]})
+    return jsonify({"thread_id": thread_id})
 
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.json
     user_role = data.get('role', '')
-    thread_id = role_threads[user_role]
+    thread_id = role_threads.get(user_role)
+    if not thread_id:
+        return jsonify({"error": "No active conversation for this role"}), 400
     user_input = data.get('message', '')
 
     session = Session()
@@ -156,11 +154,13 @@ def chat():
     if transcript:
         transcript.transcript += f"\nUser: {user_input}\nAssistant: {assistant_response}"
         transcript.updated_at = datetime.utcnow()
+        transcript.analyzed = False  # Set analyzed to False when updating the transcript
     else:
         new_transcript = Transcript(
             thread_id=thread_id,
             role_type=user_role,
-            transcript=f"User: {user_input}\nAssistant: {assistant_response}"
+            transcript=f"User: {user_input}\nAssistant: {assistant_response}",
+            analyzed=False  # Set analyzed to False for new transcripts
         )
         session.add(new_transcript)
     session.commit()
@@ -172,8 +172,8 @@ def chat():
 @app.route('/end_session', methods=['POST'])
 def end_session():
     data = request.json
+    thread_id = data.get('thread_id')
     role = data.get('role')
-    thread_id = role_threads[role]
     
     session = Session()
     
@@ -188,11 +188,13 @@ def end_session():
     if transcript:
         transcript.transcript = transcript_text
         transcript.updated_at = datetime.utcnow()
+        transcript.analyzed = False  # Set analyzed to False when updating the transcript
     else:
         new_transcript = Transcript(
             thread_id=thread_id,
             role_type=role,
-            transcript=transcript_text
+            transcript=transcript_text,
+            analyzed=False  # Set analyzed to False for new transcripts
         )
         session.add(new_transcript)
     
@@ -230,7 +232,7 @@ def analyze_transcript(thread_id, role_type):
         # Use GPT-4 to analyze the transcript
         try:
             response = client.chat.completions.create(
-                model="gpt-4-turbo-preview",
+                model="gpt-4-0613",
                 messages=[
                     {"role": "system", "content": "You are an AI assistant tasked with analyzing transcripts from the Bemori - Water For Life Simulation."},
                     {"role": "user", "content": prompt}
@@ -248,6 +250,9 @@ def analyze_transcript(thread_id, role_type):
                 new_analysis = TranscriptAnalysis(thread_id=thread_id, role_type=role_type, analysis=analysis)
                 session.add(new_analysis)
 
+            # Mark the transcript as analyzed
+            transcript.analyzed = True
+            
             session.commit()
             logger.info(f"Analysis completed and saved for thread {thread_id} and role {role_type}")
         except Exception as e:
@@ -261,15 +266,14 @@ def periodic_analysis():
     logger.info("Starting periodic analysis...")
     try:
         session = Session()
-        # Get all active threads from the last 24 hours
-        cutoff_time = datetime.utcnow() - timedelta(hours=24)
-        recent_threads = session.query(Message.thread_id, Message.role_type).filter(Message.timestamp > cutoff_time).distinct().all()
+        # Get all unanalyzed transcripts
+        unanalyzed_transcripts = session.query(Transcript).filter_by(analyzed=False).all()
         
-        logger.info(f"Found {len(recent_threads)} recent threads to analyze")
+        logger.info(f"Found {len(unanalyzed_transcripts)} unanalyzed transcripts to analyze")
         
-        for thread_id, role_type in recent_threads:
-            logger.info(f"Analyzing thread {thread_id} for role {role_type}")
-            analyze_transcript(thread_id, role_type)
+        for transcript in unanalyzed_transcripts:
+            logger.info(f"Analyzing thread {transcript.thread_id} for role {transcript.role_type}")
+            analyze_transcript(transcript.thread_id, transcript.role_type)
         
         session.close()
         logger.info("Periodic analysis completed successfully.")

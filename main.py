@@ -6,8 +6,14 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from apscheduler.schedulers.background import BackgroundScheduler
+import logging
 
 app = Flask(__name__)
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Init client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -30,18 +36,6 @@ class Message(Base):
     role_type = Column(String, nullable=False)
     sender = Column(String, nullable=False)
     message = Column(Text, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-
-# Define SimulationUpdate model
-class SimulationUpdate(Base):
-    __tablename__ = 'simulation_updates'
-
-    id = Column(Integer, primary_key=True)
-    thread_id = Column(String, nullable=False)
-    role_type = Column(String, nullable=False)
-    water_level = Column(Float, nullable=False)
-    population = Column(Integer, nullable=False)
-    resources = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
 # Define Transcript model
@@ -195,6 +189,62 @@ def end_session():
     session.close()
     
     return jsonify({"status": "success", "message": "Session ended and transcript saved"})
+
+def analyze_transcript(thread_id, role_type):
+    logger.info(f"Starting analysis for thread_id: {thread_id}, role_type: {role_type}")
+    session = Session()
+    transcript = session.query(Transcript).filter_by(thread_id=thread_id, role_type=role_type).first()
+    
+    if transcript:
+        logger.info(f"Found transcript for thread_id: {thread_id}, role_type: {role_type}")
+        # Use OpenAI API to analyze the transcript
+        response = client.chat.completions.create(
+            model="gpt-4-turbo-preview",
+            messages=[
+                {"role": "system", "content": "You are an AI assistant tasked with analyzing conversation transcripts."},
+                {"role": "user", "content": f"Please analyze this transcript and provide a summary of the key points, decisions made, and any important insights:\n\n{transcript.transcript}"}
+            ]
+        )
+        
+        analysis = response.choices[0].message.content
+        logger.info(f"Analysis completed for thread_id: {thread_id}, role_type: {role_type}")
+        
+        # Save or update the analysis in the database
+        existing_analysis = session.query(TranscriptAnalysis).filter_by(thread_id=thread_id, role_type=role_type).first()
+        if existing_analysis:
+            existing_analysis.analysis = analysis
+            existing_analysis.created_at = datetime.utcnow()
+            logger.info(f"Updated existing analysis for thread_id: {thread_id}, role_type: {role_type}")
+        else:
+            new_analysis = TranscriptAnalysis(thread_id=thread_id, role_type=role_type, analysis=analysis)
+            session.add(new_analysis)
+            logger.info(f"Created new analysis for thread_id: {thread_id}, role_type: {role_type}")
+        
+        session.commit()
+    else:
+        logger.warning(f"No transcript found for thread_id: {thread_id}, role_type: {role_type}")
+    
+    session.close()
+
+def periodic_analysis():
+    logger.info("Starting periodic analysis")
+    session = Session()
+    transcripts = session.query(Transcript).all()
+    logger.info(f"Found {len(transcripts)} transcripts to analyze")
+    if not transcripts:
+        logger.info("No transcripts found for analysis")
+    else:
+        for transcript in transcripts:
+            analyze_transcript(transcript.thread_id, transcript.role_type)
+    session.close()
+    logger.info("Periodic analysis completed")
+
+# Set up the scheduler
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=periodic_analysis, trigger="interval", minutes=1)  # Changed from hours=1 to minutes=1
+scheduler.start()
+
+logger.info("Scheduler started with 1-minute interval")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

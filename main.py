@@ -1,4 +1,5 @@
 import os
+import logging
 from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 import functions
@@ -6,6 +7,10 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -38,7 +43,7 @@ class SimulationUpdate(Base):
 
     id = Column(Integer, primary_key=True)
     role_type = Column(String, nullable=False)
-    update = Column(Text, nullable=False)
+    update_content = Column(Text, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
 # Define Transcript model
@@ -153,40 +158,60 @@ def end_session():
     thread_id = data.get('thread_id')
     role = data.get('role')
     
+    logger.info(f"Ending session for thread_id: {thread_id}, role: {role}")
+    
     session = Session()
     
-    # Fetch all messages for the thread
-    messages = session.query(Message).filter_by(thread_id=thread_id, role_type=role).order_by(Message.timestamp).all()
+    try:
+        # Fetch all messages for the thread
+        messages = session.query(Message).filter_by(thread_id=thread_id, role_type=role).order_by(Message.timestamp).all()
+        
+        logger.info(f"Found {len(messages)} messages for the thread")
+        
+        # Compile messages into a transcript
+        transcript_text = "\n".join([f"{msg.sender.capitalize()}: {msg.message}" for msg in messages])
+        
+        # Update or create transcript
+        transcript = session.query(Transcript).filter_by(thread_id=thread_id, role_type=role).first()
+        if transcript:
+            transcript.transcript = transcript_text
+            transcript.updated_at = datetime.utcnow()
+            logger.info(f"Updated existing transcript for thread_id: {thread_id}")
+        else:
+            new_transcript = Transcript(
+                thread_id=thread_id,
+                role_type=role,
+                transcript=transcript_text
+            )
+            session.add(new_transcript)
+            logger.info(f"Created new transcript for thread_id: {thread_id}")
+        
+        # Analyze transcript with OpenAI and save update
+        update = analyze_transcript_with_openai(transcript_text)
+        if update:
+            save_simulation_updates(session, role, update)
+            logger.info(f"Saved simulation update for role: {role}")
+        
+        # Mark the session as ended in the database
+        end_message = Message(thread_id=thread_id, role_type=role, sender='system', message='Session ended')
+        session.add(end_message)
+        
+        session.commit()
+        logger.info(f"Session ended successfully for thread_id: {thread_id}")
+        
+        # Remove the thread_id from the role_threads dictionary
+        if role in role_threads and role_threads[role] == thread_id:
+            del role_threads[role]
+            logger.info(f"Removed thread_id from role_threads for role: {role}")
+        
+        return jsonify({"status": "success", "message": "Session ended, transcript saved, and simulation updated"})
     
-    # Compile messages into a transcript
-    transcript_text = "\n".join([f"{msg.sender.capitalize()}: {msg.message}" for msg in messages])
+    except Exception as e:
+        logger.error(f"Error ending session: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
     
-    # Update or create transcript
-    transcript = session.query(Transcript).filter_by(thread_id=thread_id, role_type=role).first()
-    if transcript:
-        transcript.transcript = transcript_text
-        transcript.updated_at = datetime.utcnow()
-    else:
-        new_transcript = Transcript(
-            thread_id=thread_id,
-            role_type=role,
-            transcript=transcript_text
-        )
-        session.add(new_transcript)
-    
-    # Analyze transcript with OpenAI and save update
-    update = analyze_transcript_with_openai(transcript_text)
-    if update:
-        save_simulation_updates(session, role, update)
-    
-    # Mark the session as ended in the database
-    end_message = Message(thread_id=thread_id, role_type=role, sender='system', message='Session ended')
-    session.add(end_message)
-    
-    session.commit()
-    session.close()
-    
-    return jsonify({"status": "success", "message": "Session ended, transcript saved, and simulation updated"})
+    finally:
+        session.close()
 
 def analyze_transcript_with_openai(transcript):
     try:
@@ -199,7 +224,7 @@ def analyze_transcript_with_openai(transcript):
         )
         return response.choices[0].message.content
     except Exception as e:
-        print(f"Error in analyzing transcript: {str(e)}")
+        logger.error(f"Error in analyzing transcript: {str(e)}")
         return None
 
 def save_simulation_updates(session, role, update):
@@ -208,7 +233,7 @@ def save_simulation_updates(session, role, update):
     
     new_update = SimulationUpdate(
         role_type=role,
-        update=update
+        update_content=update
     )
     session.add(new_update)
     session.commit()

@@ -10,4 +10,5 @@ dependencies = [
     "psycopg2-binary>=2.9.9",
     "openai>=1.51.2",
     "sqlalchemy>=2.0.35",
+    "alembic>=1.13.3",
 ]

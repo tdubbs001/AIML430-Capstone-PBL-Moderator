@@ -44,6 +44,17 @@ class SimulationUpdate(Base):
     resources = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
+# Define Transcript model
+class Transcript(Base):
+    __tablename__ = 'transcripts'
+
+    id = Column(Integer, primary_key=True)
+    thread_id = Column(String, nullable=False)
+    role_type = Column(String, nullable=False)
+    transcript = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 # Create tables
 Base.metadata.create_all(engine)
 
@@ -119,6 +130,20 @@ def chat():
     # Save assistant message to database
     assistant_message = Message(thread_id=thread_id, role_type=user_role, sender='assistant', message=assistant_response)
     session.add(assistant_message)
+    session.commit()
+
+    # Update or create transcript
+    transcript = session.query(Transcript).filter_by(thread_id=thread_id, role_type=user_role).first()
+    if transcript:
+        transcript.transcript += f"\nUser: {user_input}\nAssistant: {assistant_response}"
+        transcript.updated_at = datetime.utcnow()
+    else:
+        new_transcript = Transcript(
+            thread_id=thread_id,
+            role_type=user_role,
+            transcript=f"User: {user_input}\nAssistant: {assistant_response}"
+        )
+        session.add(new_transcript)
     session.commit()
 
     session.close()

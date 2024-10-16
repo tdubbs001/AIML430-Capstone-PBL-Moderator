@@ -57,13 +57,29 @@ def start_conversation():
     # Check if thread exists in database
     existing_message = session.query(Message).filter_by(thread_id=thread_id).first()
     if not existing_message:
-        # Create a new thread entry in the database
-        new_message = Message(thread_id=thread_id, role_type=role, sender='system', message='Conversation started')
+        # Create a new thread entry in the database with a role-specific start message
+        start_message = get_start_message(role)
+        new_message = Message(thread_id=thread_id, role_type=role, sender='system', message=start_message)
         session.add(new_message)
         session.commit()
     
     session.close()
     return jsonify({"thread_id": thread_id})
+
+def get_start_message(role):
+    role_messages = {
+        "undp_head": "Welcome, UNDP Head of Environment and Energy Section. You're overseeing the Bemori water project. How can I assist you today?",
+        "undp_water_project_manager": "Greetings, UNDP Water Project Manager. You're on the ground managing the Bemori project. What information do you need?",
+        "local_government_official": "Hello, District Water Engineer. You're our key local government partner. How can I help with the Bemori water project?",
+        "local_ngo_officer": "Welcome, Local NGO Programme Officer. Your insights are crucial for the Bemori project. What would you like to discuss?",
+        "international_ngo_officer": "Greetings, Oxfam GB Program Officer. Your international perspective is valuable. How can I assist with the Bemori project?",
+        "bilateral_aid_officer": "Hello, Irish Aid Programme Officer. Your support is essential for the Bemori project. What information do you need?",
+        "eu_officer": "Welcome, European Union Programme Officer. Your oversight is important for the Bemori project. How can I help you today?",
+        "village_chief": "Greetings, Village Chief. Your community's needs are at the heart of the Bemori project. What would you like to discuss?",
+        "womens_group_rep": "Welcome, OPMT Women's Group Representative. Your voice is crucial for the Bemori project. How can I assist you?",
+        "water_division_director": "Hello, Director of the Water Division. Your ministry's support is key for the Bemori project. What information do you need?"
+    }
+    return role_messages.get(role, "Welcome to the Bemori - Water For Life Simulation. How can I assist you today?")
 
 @app.route('/chat', methods=['POST'])
 def chat():

@@ -1,0 +1,16 @@
+{
+    "thread_JH9R5YNJyL8LQ6OhIW6CVYX3": [
+        {
+            "speaker": "user",
+            "timestamp": "2024-10-12T02:02:13.463759Z",
+            "message": "Hi",
+            "role": "undp_head"
+        },
+        {
+            "speaker": "assistant",
+            "timestamp": "2024-10-12T02:02:16.128289Z",
+            "message": "Hello! How can I assist you today?\n",
+            "role": ""
+        }
+    ]
+}

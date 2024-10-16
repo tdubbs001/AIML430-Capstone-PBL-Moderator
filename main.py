@@ -138,9 +138,26 @@ def end_session():
     session.add(end_message)
     session.commit()
     
+    # Retrieve all messages for this thread
+    messages = session.query(Message).filter_by(thread_id=thread_id).order_by(Message.timestamp).all()
+    
+    # Format messages into a transcript
+    transcript = f"Transcript for {role} (Thread ID: {thread_id})\n\n"
+    for msg in messages:
+        timestamp = msg.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        transcript += f"[{timestamp}] {msg.sender.capitalize()}: {msg.message}\n\n"
+    
+    # Ensure the 'transcripts' directory exists
+    os.makedirs('transcripts', exist_ok=True)
+    
+    # Save the transcript to a file
+    filename = f"transcripts/{role}_{thread_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt"
+    with open(filename, 'w') as f:
+        f.write(transcript)
+    
     session.close()
     
-    return jsonify({"status": "success"})
+    return jsonify({"status": "success", "transcript_file": filename})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

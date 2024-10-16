@@ -1,203 +1,148 @@
-let currentThreadId = null;
-let selectedRole = null;
+document.addEventListener('DOMContentLoaded', function() {
+    const chatContainer = document.getElementById('chat-container');
+    const chatMessages = document.getElementById('chat-messages');
+    const questionForm = document.getElementById('question-form');
+    const questionInput = document.getElementById('question-input');
+    const roleDropdown = document.getElementById('role-dropdown');
+    const loadingIndicator = document.querySelector('.loading');
+    const themeToggle = document.getElementById('theme-toggle');
 
-const roleNames = {
-    'undp_head': 'UNDP - Head of Environment and Energy Section',
-    'undp_water_project_manager': 'UNDP Water Project Manager (United Nations Volunteer)',
-    'local_government_official': 'Local Government Official – District Water Engineer',
-    'local_ngo_officer': 'Local NGO Programme Officer',
-    'international_ngo_officer': 'International Implementing NGO Program Officer with Oxfam GB',
-    'bilateral_aid_officer': 'Bilateral Aid Agency Programme Officer – Irish Aid',
-    'eu_officer': 'European Union Programme Officer',
-    'village_chief': 'Village Chief',
-    'womens_group_rep': 'District Women\'s Group Representative for OPMT (The Popular Organisation of East Timorese Women)',
-    'water_division_director': 'Director of the Water Division in the Ministry of Infrastructure'
-};
+    let currentThreadId = null;
+    let currentRole = null;
 
-function endCurrentSession() {
-    if (currentThreadId) {
-        fetch('/end_session', {
+    if (roleDropdown) {
+        roleDropdown.addEventListener('change', function() {
+            currentRole = this.value;
+            if (currentRole) {
+                fetch(`/start?role=${currentRole}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        currentThreadId = data.thread_id;
+                        chatMessages.innerHTML = '';
+                        addSystemMessage('New conversation started. How can I assist you today?');
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+        });
+    }
+
+    if (questionForm) {
+        questionForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!currentRole) {
+                alert('Please select a role before sending a message.');
+                return;
+            }
+            const message = questionInput.value.trim();
+            if (message) {
+                addUserMessage(message);
+                questionInput.value = '';
+                sendMessage(message);
+            }
+        });
+    }
+
+    function sendMessage(message) {
+        loadingIndicator.classList.remove('d-none');
+        fetch('/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                thread_id: currentThreadId,
-                role: selectedRole
+                message: message,
+                role: currentRole,
+                thread_id: currentThreadId
             }),
-        }).catch(error => console.error('Error ending session:', error));
-    }
-}
-
-function startNewConversation() {
-    if (!selectedRole) {
-        console.error('No role selected');
-        return;
-    }
-    fetch(`/start?role=${selectedRole}`)
+        })
         .then(response => response.json())
         .then(data => {
-            currentThreadId = data.thread_id;
-            document.getElementById('chat-messages').innerHTML = '';
-            displaySystemMessage(`New conversation started as ${roleNames[selectedRole]}`);
+            loadingIndicator.classList.add('d-none');
+            addAssistantMessage(data.response);
         })
-        .catch(error => console.error('Error:', error));
-}
-
-function sendMessage(message) {
-    if (!currentThreadId) {
-        console.error('No active conversation');
-        alert('Please select a role to start a conversation.');
-        return;
+        .catch(error => {
+            console.error('Error:', error);
+            loadingIndicator.classList.add('d-none');
+        });
     }
 
-    if (!selectedRole) {
-        alert('Please select a role before sending a message.');
-        return;
-    }
-
-    displayMessage(message, 'user');
-
-    showLoading(true);
-
-    fetch('/chat', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            thread_id: currentThreadId,
-            message: message,
-            role: selectedRole
-        }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            console.error('Error:', data.error);
-            alert(data.error);
-        } else {
-            displayMessage(data.response, 'assistant');
-        }
-        showLoading(false);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showLoading(false);
-    });
-}
-
-function formatRole(role) {
-    return roleNames[role] || role;
-}
-
-function displaySystemMessage(message) {
-    const chatMessages = document.getElementById('chat-messages');
-    if (!chatMessages) return;
-
-    const messageContainer = document.createElement('div');
-    messageContainer.classList.add('message-container', 'system-container');
-    
-    const messageElement = document.createElement('div');
-    messageElement.classList.add('message', 'system-message');
-    messageElement.textContent = message;
-    
-    messageContainer.appendChild(messageElement);
-    chatMessages.appendChild(messageContainer);
-    scrollToBottom();
-}
-
-function displayMessage(message, sender) {
-    const chatMessages = document.getElementById('chat-messages');
-    if (!chatMessages) return;
-
-    const messageContainer = document.createElement('div');
-    messageContainer.classList.add('message-container', `${sender}-container`);
-    
-    const messageElement = document.createElement('div');
-    messageElement.classList.add('message', `${sender}-message`);
-    
-    const messageHeader = document.createElement('div');
-    messageHeader.classList.add('message-header');
-    messageHeader.textContent = sender === 'user' ? formatRole(selectedRole) : 'AI Assistant';
-    
-    const messageContent = document.createElement('div');
-    messageContent.classList.add('message-content');
-    
-    if (sender === 'assistant') {
-        messageContent.innerHTML = marked.parse(message);
-    } else {
-        messageContent.textContent = message;
-    }
-    
-    messageElement.appendChild(messageHeader);
-    messageElement.appendChild(messageContent);
-    messageContainer.appendChild(messageElement);
-    chatMessages.appendChild(messageContainer);
-    scrollToBottom();
-}
-
-function scrollToBottom() {
-    const chatContainer = document.getElementById('chat-container');
-    if (chatContainer) {
+    function addUserMessage(message) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message-container user-container';
+        messageElement.innerHTML = `
+            <div class="message user-message">
+                <div class="message-header">You</div>
+                <div class="message-content">${escapeHtml(message)}</div>
+            </div>
+        `;
+        chatMessages.appendChild(messageElement);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
-}
 
-function showLoading(show) {
-    const loadingElement = document.querySelector('.loading');
-    if (loadingElement) {
-        if (show) {
-            loadingElement.classList.remove('d-none');
-        } else {
-            loadingElement.classList.add('d-none');
+    function addAssistantMessage(message) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message-container assistant-container';
+        messageElement.innerHTML = `
+            <div class="message assistant-message">
+                <div class="message-header">Assistant</div>
+                <div class="message-content">${marked.parse(escapeHtml(message))}</div>
+            </div>
+        `;
+        chatMessages.appendChild(messageElement);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function addSystemMessage(message) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message-container system-container';
+        messageElement.innerHTML = `
+            <div class="message system-message">
+                <div class="message-content">${escapeHtml(message)}</div>
+            </div>
+        `;
+        chatMessages.appendChild(messageElement);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function endCurrentSession() {
+        if (currentThreadId && currentRole) {
+            fetch('/end_session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    thread_id: currentThreadId,
+                    role: currentRole
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Session ended:', data);
+            })
+            .catch(error => console.error('Error ending session:', error));
         }
-    }
-}
-
-function toggleTheme() {
-    const html = document.documentElement;
-    const currentTheme = html.getAttribute('data-bs-theme');
-    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-    html.setAttribute('data-bs-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const questionForm = document.getElementById('question-form');
-    const questionInput = document.getElementById('question-input');
-    const roleDropdown = document.getElementById('role-dropdown');
-    const themeToggle = document.getElementById('theme-toggle');
-
-    if (questionForm) {
-        questionForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (!currentThreadId) {
-                alert('Please select a role to start a conversation.');
-                return;
-            }
-            const message = questionInput.value.trim();
-            if (message) {
-                sendMessage(message);
-                questionInput.value = '';
-            }
-        });
-    }
-
-    if (roleDropdown) {
-        roleDropdown.addEventListener('change', (e) => {
-            if (selectedRole) {
-                endCurrentSession();
-            }
-            selectedRole = e.target.value;
-            if (selectedRole) {
-                startNewConversation();
-            }
-        });
     }
 
     if (themeToggle) {
-        themeToggle.addEventListener('change', toggleTheme);
+        themeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-bs-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+        });
     }
 
     // Set initial theme based on user preference or system setting

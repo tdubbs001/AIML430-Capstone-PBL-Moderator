@@ -130,44 +130,5 @@ def end_session():
     
     return jsonify({"status": "success"})
 
-@app.route('/review_session', methods=['POST'])
-def review_session():
-    data = request.json
-    thread_id = data.get('thread_id')
-    role = data.get('role')
-
-    session = Session()
-
-    # Fetch all messages for the given thread
-    messages = session.query(Message).filter_by(thread_id=thread_id).order_by(Message.timestamp).all()
-
-    # Prepare the conversation history
-    conversation_history = []
-    for message in messages:
-        if message.sender != 'system':
-            conversation_history.append(f"{message.sender.capitalize()}: {message.message}")
-
-    # Generate a summary using OpenAI
-    prompt = f"Please provide a concise summary of the following conversation between a user (acting as {role}) and an AI assistant:\n\n" + "\n".join(conversation_history)
-    
-    response = client.chat.completions.create(
-        model="gpt-4-turbo-preview",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant that summarizes conversations."},
-            {"role": "user", "content": prompt}
-        ]
-    )
-
-    summary = response.choices[0].message.content
-
-    # Save the summary to the database
-    summary_message = Message(thread_id=thread_id, role_type=role, sender='system', message=f"Session Summary: {summary}")
-    session.add(summary_message)
-    session.commit()
-
-    session.close()
-
-    return jsonify({"summary": summary})
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

@@ -25,7 +25,7 @@ function endCurrentSession() {
                 thread_id: currentThreadId,
                 role: selectedRole
             }),
-        }).catch(error => console.error('Error ending session:', error.message));
+        }).catch(error => console.error('Error ending session:', error.message || 'Unknown error'));
     }
 }
 
@@ -41,7 +41,7 @@ function startNewConversation() {
             document.getElementById('chat-messages').innerHTML = '';
             displaySystemMessage(`New conversation started as ${roleNames[selectedRole]}`);
         })
-        .catch(error => console.error('Error starting conversation:', error.message));
+        .catch(error => console.error('Error starting conversation:', error.message || 'Unknown error'));
 }
 
 function sendMessage(message) {
@@ -71,18 +71,22 @@ function sendMessage(message) {
             role: selectedRole
         }),
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.error) {
-            console.error('Error from server:', data.error);
-            alert(data.error);
+            throw new Error(data.error);
         } else {
             displayMessage(data.response, 'assistant');
         }
         showLoading(false);
     })
     .catch(error => {
-        console.error('Error sending message:', error.message);
+        console.error('Error:', error.message || 'Unknown error');
         alert('An error occurred while sending the message. Please try again.');
         showLoading(false);
     });
@@ -201,7 +205,6 @@ document.addEventListener('DOMContentLoaded', () => {
         themeToggle.addEventListener('change', toggleTheme);
     }
 
-    // Set initial theme based on user preference or system setting
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
         document.documentElement.setAttribute('data-bs-theme', savedTheme);
@@ -215,7 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Add beforeunload event listener
     window.addEventListener('beforeunload', (event) => {
         endCurrentSession();
     });

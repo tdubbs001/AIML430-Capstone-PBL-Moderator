@@ -25,7 +25,7 @@ function endCurrentSession() {
                 thread_id: currentThreadId,
                 role: selectedRole
             }),
-        }).catch(error => console.error('Error ending session:', error.message || 'Unknown error'));
+        }).catch(error => console.error('Error ending session:', error.message || JSON.stringify(error)));
     }
 }
 
@@ -41,7 +41,7 @@ function startNewConversation() {
             document.getElementById('chat-messages').innerHTML = '';
             displaySystemMessage(`New conversation started as ${roleNames[selectedRole]}`);
         })
-        .catch(error => console.error('Error starting conversation:', error.message || 'Unknown error'));
+        .catch(error => console.error('Error starting conversation:', error.message || JSON.stringify(error)));
 }
 
 function sendMessage(message) {
@@ -86,7 +86,7 @@ function sendMessage(message) {
         showLoading(false);
     })
     .catch(error => {
-        console.error('Error:', error.message || 'Unknown error');
+        console.error('Error:', error.message || JSON.stringify(error));
         alert('An error occurred while sending the message. Please try again.');
         showLoading(false);
     });

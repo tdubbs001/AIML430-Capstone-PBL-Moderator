@@ -25,7 +25,7 @@ function endCurrentSession() {
                 thread_id: currentThreadId,
                 role: selectedRole
             }),
-        }).catch(error => console.error('Error ending session:', error));
+        }).catch(error => console.error('Error ending session:', error.message));
     }
 }
 
@@ -41,7 +41,7 @@ function startNewConversation() {
             document.getElementById('chat-messages').innerHTML = '';
             displaySystemMessage(`New conversation started as ${roleNames[selectedRole]}`);
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => console.error('Error starting conversation:', error.message));
 }
 
 function sendMessage(message) {
@@ -74,7 +74,7 @@ function sendMessage(message) {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            console.error('Error:', data.error);
+            console.error('Error from server:', data.error);
             alert(data.error);
         } else {
             displayMessage(data.response, 'assistant');
@@ -82,7 +82,8 @@ function sendMessage(message) {
         showLoading(false);
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Error sending message:', error.message);
+        alert('An error occurred while sending the message. Please try again.');
         showLoading(false);
     });
 }

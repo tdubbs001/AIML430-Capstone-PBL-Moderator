@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 import functions
 from datetime import datetime
+from datetime import timedelta
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -140,7 +141,7 @@ def chat():
     transcript = session.query(Transcript).filter_by(thread_id=thread_id, role_type=user_role).first()
     if transcript:
         transcript.transcript += f"\nUser: {user_input}\nAssistant: {assistant_response}"
-        transcript.updated_at = datetime.utcnow()
+        transcript.updated_at = datetime.now()
     else:
         new_transcript = Transcript(
             thread_id=thread_id,
@@ -171,8 +172,8 @@ def end_session():
     # Update or create transcript
     transcript = session.query(Transcript).filter_by(thread_id=thread_id, role_type=role).first()
     if transcript:
-        transcript.transcript = transcript_text
-        transcript.updated_at = datetime.utcnow()
+        transcript.transcript = f'{transcript_text}\n{transcript.transcript}'
+        transcript.updated_at = datetime.now()
     else:
         new_transcript = Transcript(
             thread_id=thread_id,
@@ -199,10 +200,10 @@ def analyze_transcript(thread_id, role_type):
         logger.info(f"Found transcript for thread_id: {thread_id}, role_type: {role_type}")
         # Use OpenAI API to analyze the transcript
         response = client.chat.completions.create(
-            model="gpt-4-turbo-preview",
+            model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are an AI assistant tasked with analyzing conversation transcripts."},
-                {"role": "user", "content": f"Please analyze this transcript and provide a summary of the key points, decisions made, and any important insights:\n\n{transcript.transcript}"}
+                {"role": "system", "content": "You are an AI assistant tasked with analyzing conversation transcripts in a Project Based Learning simulation. Your task is to analyze the messages from the user only. The user has a role type associated with them, along with timestamps for messages. This is reported in the transcript. I want you to then produce a report outlining what has happened in the transcript. The purpose of this report is to update the moderator on the state of the simulation for this role."},
+                {"role": "user", "content": f"Here is the transcript from {role_type}:\n\n{transcript.transcript}"}
             ]
         )
         
@@ -226,16 +227,41 @@ def analyze_transcript(thread_id, role_type):
     
     session.close()
 
+def export_transcripts_to_md(transcripts):
+    session = Session()
+    for transcript in transcripts:
+        # Determine the file name
+        md_filename = f"transcripts/{transcript.role_type}_{transcript.thread_id}.md"
+
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(md_filename), exist_ok=True)
+
+        # Write to the markdown file
+        with open(md_filename, 'w') as f:
+            f.write(f"# Transcript for {transcript.role_type}\n")
+            f.write(f"_Thread ID: {transcript.thread_id}_\n")
+            f.write("---\n\n")
+            f.write(transcript.transcript)
+
+        logger.info(f"Saved transcript for role type '{transcript.role_type}' to {md_filename}")
+    session.close()
+
 def periodic_analysis():
     logger.info("Starting periodic analysis")
     session = Session()
-    transcripts = session.query(Transcript).all()
-    logger.info(f"Found {len(transcripts)} transcripts to analyze")
+    time_interval = datetime.now() - timedelta(minutes=1)
+    
+    transcripts = session.query(Transcript).filter(
+        (Transcript.created_at > time_interval) | 
+        (Transcript.updated_at > time_interval)
+    ).all()
+
+    logger.info(f"Found {len(transcripts)} new transcripts to analyze")
     if not transcripts:
         logger.info("No transcripts found for analysis")
     else:
         for transcript in transcripts:
-            analyze_transcript(transcript.thread_id, transcript.role_type)
+            export_transcripts_to_md(transcripts)
     session.close()
     logger.info("Periodic analysis completed")
 

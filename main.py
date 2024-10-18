@@ -3,11 +3,9 @@ from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 import functions
 from datetime import datetime
-from datetime import timedelta
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 
 app = Flask(__name__)
@@ -27,6 +25,9 @@ model_name = 'gpt-4'
 vector_store_name = 'Simulation Documents'
 directory_path = 'simulation_docs'
 
+# Global variable for assistant_id
+global assistant_id
+
 # Call the function and handle potential errors
 try:
     result = functions.create_assistant_with_vector_store(
@@ -42,10 +43,10 @@ try:
         logger.info(f"Assistant created with ID: {assistant_id}")
     else:
         logger.error("Failed to create assistant and vector store")
-        assistant_id, vector_store, file_ids = None, None, None
+        assistant_id = None
 except Exception as e:
     logger.error(f"An error occurred while creating the assistant: {str(e)}")
-    assistant_id, vector_store, file_ids = None, None, None
+    assistant_id = None
 
 # Set up database connection
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://user:password@localhost/dbname')
@@ -74,16 +75,6 @@ class Transcript(Base):
     transcript = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-# Define TranscriptAnalysis model
-class TranscriptAnalysis(Base):
-    __tablename__ = 'transcript_analysis'
-
-    id = Column(Integer, primary_key=True)
-    thread_id = Column(String, nullable=False)
-    role_type = Column(String, nullable=False)
-    analysis = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
 
 # Create tables
 Base.metadata.create_all(engine)
@@ -120,10 +111,12 @@ def start_conversation():
 
 @app.route('/chat', methods=['POST'])
 def chat():
+    global assistant_id
     data = request.json
     user_role = data.get('role', '')
     thread_id = role_threads.get(user_role)
     if not thread_id:
+        logger.error(f"No active conversation for role: {user_role}")
         return jsonify({"error": "No active conversation for this role"}), 400
     user_input = data.get('message', '')
 
@@ -190,7 +183,7 @@ def chat():
     transcript = session.query(Transcript).filter_by(thread_id=thread_id, role_type=user_role).first()
     if transcript:
         transcript.transcript += f"\nUser: {user_input}\nAssistant: {assistant_response}"
-        transcript.updated_at = datetime.now()
+        transcript.updated_at = datetime.utcnow()
     else:
         new_transcript = Transcript(
             thread_id=thread_id,
@@ -222,7 +215,7 @@ def end_session():
     transcript = session.query(Transcript).filter_by(thread_id=thread_id, role_type=role).first()
     if transcript:
         transcript.transcript = f'{transcript_text}\n{transcript.transcript}'
-        transcript.updated_at = datetime.now()
+        transcript.updated_at = datetime.utcnow()
     else:
         new_transcript = Transcript(
             thread_id=thread_id,

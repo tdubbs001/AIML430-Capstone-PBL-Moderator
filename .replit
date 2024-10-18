@@ -23,6 +23,10 @@ args = "Flask Server"
 task = "workflow.run"
 args = "Check Database Table"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Flask Server Debug"
+
 [[workflows.workflow]]
 name = "Start Flask App"
 author = "agent"
@@ -58,9 +62,25 @@ agentRequireRestartOnSave = false
 task = "shell.exec"
 args = "psql $DATABASE_URL -c \"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'transcript_analysis');\""
 
+[[workflows.workflow]]
+name = "Flask Server Debug"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+waitForPort = 5001
+
 [deployment]
 run = ["sh", "-c", "python main.py"]
 
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3000

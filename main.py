@@ -18,13 +18,14 @@ logger = logging.getLogger(__name__)
 
 # Init client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+logger.info(f"OpenAI client initialized with API key: {'*' * len(os.getenv('OPENAI_API_KEY', ''))}")
 
 # Define parameters
 assistant_name = 'AI Moderator - Bemori Water For Life Simulation'
 assistant_instructions = 'You are a helpful assistant designed to moderate a project-based learning simulation.'
-model_name = 'gpt-4'  # Changed from 'gpt-4o' to 'gpt-4'
+model_name = 'gpt-4'
 vector_store_name = 'Simulation Documents'
-directory_path = 'simulation_docs'  # This is now correctly defined
+directory_path = 'simulation_docs'
 
 # Call the function and handle potential errors
 try:
@@ -134,27 +135,51 @@ def chat():
     session.commit()
 
     # Add the user's role and message to the thread
-    client.beta.threads.messages.create(
-        thread_id=thread_id,
-        role="user",
-        content=f"[Role: {user_role}] {user_input}"
-    )
-
-    run = client.beta.threads.runs.create(
-        thread_id=thread_id,
-        assistant_id=assistant_id
-    )
-
-    while True:
-        run_status = client.beta.threads.runs.retrieve(
+    try:
+        client.beta.threads.messages.create(
             thread_id=thread_id,
-            run_id=run.id
+            role="user",
+            content=f"[Role: {user_role}] {user_input}"
         )
-        if run_status.status == 'completed':
-            break
+    except Exception as e:
+        logger.error(f"Error creating message: {str(e)}")
+        return jsonify({"error": "Failed to create message"}), 500
 
-    messages = client.beta.threads.messages.list(thread_id=thread_id)
-    assistant_response = messages.data[0].content[0].text.value
+    # Check if assistant_id is available
+    if assistant_id is None:
+        logger.error("Assistant ID is not available")
+        return jsonify({"error": "Assistant not initialized"}), 500
+
+    try:
+        run = client.beta.threads.runs.create(
+            thread_id=thread_id,
+            assistant_id=assistant_id
+        )
+    except Exception as e:
+        logger.error(f"Error creating run: {str(e)}")
+        return jsonify({"error": "Failed to create run"}), 500
+
+    try:
+        while True:
+            run_status = client.beta.threads.runs.retrieve(
+                thread_id=thread_id,
+                run_id=run.id
+            )
+            if run_status.status == 'completed':
+                break
+            elif run_status.status == 'failed':
+                logger.error(f"Run failed: {run_status.last_error}")
+                return jsonify({"error": "Assistant run failed"}), 500
+    except Exception as e:
+        logger.error(f"Error retrieving run status: {str(e)}")
+        return jsonify({"error": "Failed to retrieve run status"}), 500
+
+    try:
+        messages = client.beta.threads.messages.list(thread_id=thread_id)
+        assistant_response = messages.data[0].content[0].text.value
+    except Exception as e:
+        logger.error(f"Error retrieving messages: {str(e)}")
+        return jsonify({"error": "Failed to retrieve messages"}), 500
 
     # Save assistant message to database
     assistant_message = Message(thread_id=thread_id, role_type=user_role, sender='assistant', message=assistant_response)

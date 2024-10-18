@@ -3,9 +3,11 @@ from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 import functions
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from datetime import timedelta
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 
 app = Flask(__name__)
@@ -27,10 +29,11 @@ directory_path = 'simulation_docs'
 
 # Global variable for assistant_id
 global assistant_id
+assistant_id = None
 
 # Call the function and handle potential errors
 try:
-    result = functions.create_assistant_with_vector_store(
+    assistant_id, vector_store, file_ids = functions.create_assistant_with_vector_store(
         client,
         assistant_name,
         assistant_instructions,
@@ -38,15 +41,12 @@ try:
         vector_store_name,
         directory_path
     )
-    if result is not None:
-        assistant_id, vector_store, file_ids = result
-        logger.info(f"Assistant created with ID: {assistant_id}")
+    if assistant_id:
+        logger.info(f"Assistant created or loaded with ID: {assistant_id}")
     else:
-        logger.error("Failed to create assistant and vector store")
-        assistant_id = None
+        logger.error("Failed to create or load assistant")
 except Exception as e:
-    logger.error(f"An error occurred while creating the assistant: {str(e)}")
-    assistant_id = None
+    logger.error(f"An error occurred while creating or loading the assistant: {str(e)}")
 
 # Set up database connection
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://user:password@localhost/dbname')
@@ -127,8 +127,8 @@ def chat():
     session.add(user_message)
     session.commit()
 
-    # Add the user's role and message to the thread
     try:
+        # Add the user's role and message to the thread
         client.beta.threads.messages.create(
             thread_id=thread_id,
             role="user",

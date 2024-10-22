@@ -21,8 +21,8 @@ Bemori - Water For Life Simulation is an interactive, project-based learning sim
 
 1. **Clone the Repository**
    ```bash
-   git clone <repository-url>
-   cd <repository-directory>
+   git clone https://github.com/tdubbs001/PBL-Moderator
+   cd PBL-Moderator
    ```
 
 2. **Environment Configuration**
